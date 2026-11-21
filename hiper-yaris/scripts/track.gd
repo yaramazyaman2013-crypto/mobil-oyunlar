@@ -21,7 +21,6 @@ var _hh := 0
 var _horigin := Vector2.ZERO
 const HCELL := 6.0
 const PLANTS := {
-	"didelta": "res://assets/real/plants/didelta_spinosa/didelta_spinosa.gltf",
 	"othonna": "res://assets/real/plants/othonna_cerarioides/othonna_cerarioides.gltf",
 	"succulent": "res://assets/real/plants/cheiridopsis_succulent/cheiridopsis_succulent.gltf",
 	"quiver": "res://assets/real/plants/dead_quiver_branch_01/dead_quiver_branch_01.gltf",
@@ -29,11 +28,6 @@ const PLANTS := {
 }
 
 const ROCKS := {
-	"cliff1": "res://assets/real/rocks/namaqualand_cliff_01/namaqualand_cliff_01.gltf",
-	"cliff2": "res://assets/real/rocks/namaqualand_cliff_02/namaqualand_cliff_02.gltf",
-	"face1": "res://assets/real/rocks/rock_face_01/rock_face_01.gltf",
-	"face2": "res://assets/real/rocks/rock_face_02/rock_face_02.gltf",
-	"mountain": "res://assets/real/rocks/mountainside/mountainside.gltf",
 	"boulder": "res://assets/real/rocks/namaqualand_boulder_02/namaqualand_boulder_02.gltf",
 	"boulders": "res://assets/real/rocks/namaqualand_boulders_01/namaqualand_boulders_01.gltf",
 	"stones": "res://assets/real/rocks/namaqualand_rocks_01/namaqualand_rocks_01.gltf",
@@ -524,7 +518,7 @@ func _build_plants() -> void:
 		var p: Vector3 = pos[i] + right[i] * side * d + tan[i] * randf_range(-4, 4)
 		if road_distance(p) < HALF + SHOULDER + 1.0: continue
 		p.y = height_at(p.x, p.z)
-		var id: String = ["didelta", "didelta", "succulent", "othonna", "quiver", "branches"].pick_random()
+		var id: String = ["succulent", "succulent", "othonna", "quiver", "branches", "branches"].pick_random()
 		var r: Node3D = load(PLANTS[id]).instantiate()
 		r.position = p
 		r.rotation.y = randf() * TAU

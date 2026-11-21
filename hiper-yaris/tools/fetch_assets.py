@@ -4,10 +4,11 @@ import json, os, urllib.request
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "assets", "real")
 API = "https://api.polyhaven.com/files/"
-MODELS = ["namaqualand_cliff_01", "namaqualand_cliff_02", "namaqualand_boulder_02", "namaqualand_boulders_01",
-          "rock_face_01", "rock_face_02", "mountainside", "namaqualand_rocks_01"]
-PLANTS = ["didelta_spinosa", "othonna_cerarioides", "cheiridopsis_succulent", "dead_quiver_branch_01", "dry_branches_medium_01"]
-TEXTURES = ["asphalt_02", "red_sand", "rocky_terrain_02", "cliff_side"]
+MODELS = ["namaqualand_boulder_02", "namaqualand_boulders_01", "namaqualand_rocks_01"]
+PLANTS = ["othonna_cerarioides", "cheiridopsis_succulent", "dead_quiver_branch_01", "dry_branches_medium_01"]
+# Doku -> gereken haritalar
+TEXTURES = {"asphalt_02": ["Diffuse", "nor_gl", "Rough"], "red_sand": ["Diffuse", "nor_gl", "Rough"],
+            "rocky_terrain_02": ["Diffuse"], "cliff_side": ["Diffuse", "nor_gl"]}
 HDRI = "kloofendal_48d_partly_cloudy_puresky"
 RES_MODEL, RES_TEX = "1k", "2k"
 
@@ -36,13 +37,15 @@ for m in PLANTS:
     for rel, info in g.get("include", {}).items():
         get(info["url"], os.path.join(d, rel))
 
-for t in TEXTURES:
+NAMES = {"Diffuse": "albedo", "nor_gl": "normal", "Rough": "rough"}
+for t, maps in TEXTURES.items():
     f = files(t)
-    for key, name in [("Diffuse", "albedo"), ("nor_gl", "normal"), ("Rough", "rough"), ("arm", "arm")]:
+    for key in maps:
+        name = NAMES[key]
         if key in f and RES_TEX in f[key]:
             get(f[key][RES_TEX]["jpg"]["url"], os.path.join(ROOT, "textures", t, name + ".jpg"))
 
-get(files(HDRI)["hdri"]["2k"]["hdr"]["url"], os.path.join(ROOT, "sky", HDRI + ".hdr"))
+get(files(HDRI)["hdri"]["1k"]["hdr"]["url"], os.path.join(ROOT, "sky", HDRI + ".hdr"))
 # Sketchfab araçları (API anahtarı gerekir; ortamın proxy'si ekler):
 #   V12 Goblin 0a20e49ad5774d778567cb5c3f345786, Rayback Mohawk 2c5ea0d5f73246549c0b9b68f53627e9,
 #   Generic Sport Car 7ad3bfb2bd7449c19698fc7d0592a601  ->  /v3/models/<uid>/download (glb)
