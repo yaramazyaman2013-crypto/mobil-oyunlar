@@ -8,13 +8,7 @@ enum State { MENU, COUNTDOWN, RACE, FINISHED }
 const LAPS := 2
 const BASE_TOP := 72.0          # m/s (~260 km/sa)
 const NITRO_ADD := 20.0
-const GRIP := 9.0               # yanal tutuş (1/s)
-const DRIFT_GRIP := 1.4
-const BRAKE_DEC := 32.0
-const A_LAT_AI := 40.0
-const CAR_R := 1.05             # çarpışma dairesi yarıçapı (araç başına 2 daire)
-const CIRCLE_OFF := 1.2
-const WALL := Track.HALF + 0.9 - 1.05
+var A_LAT_AI := float(OS.get_environment("ALAT")) if OS.get_environment("ALAT") != "" else 20.0          # yapay zekânın viraj ivmesi (m/s²)
 
 const TRACK_POINTS := [
 	Vector2(0, 0), Vector2(0, -300), Vector2(60, -520), Vector2(220, -640), Vector2(420, -620),
@@ -26,7 +20,6 @@ const TRACK_POINTS := [
 const MODELS := {
 	"concept": {"path": "res://assets/real/cars/CarConcept.glb", "yaw": 0.0, "keep": [], "wheels": "Wheel*", "paint": true},
 	"goblin": {"path": "res://assets/real/cars/goblin.glb", "yaw": PI, "keep": [], "wheels": "bone_rotation_*", "paint": true},
-	"mohawk": {"path": "res://assets/real/cars/mohawk.glb", "yaw": 0.0, "keep": ["Car_17", "Fan1_0_011_1", "Fan2_0_012_2"], "wheels": "", "paint": false},
 	"sport_a": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_4"], "wheels": "mc-wheel*", "paint": false},
 	"sport_b": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_001_9"], "wheels": "mc-wheel*", "paint": false},
 	"sport_c": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_002_14"], "wheels": "mc-wheel*", "paint": false},
@@ -35,7 +28,6 @@ const GARAGE := [
 	{"name": "AURORA  •  BUZ MAVİSİ", "model": "concept", "color": Color(0.05, 0.3, 0.85), "price": 0},
 	{"name": "STRADA GT  •  TURUNCU", "model": "sport_b", "color": Color.WHITE, "price": 200},
 	{"name": "GOBLIN V12  •  ZEHİR YEŞİLİ", "model": "goblin", "color": Color(0.2, 0.7, 0.05), "price": 350},
-	{"name": "RAYBACK MOHAWK  •  YARIŞ", "model": "mohawk", "color": Color.WHITE, "price": 500},
 	{"name": "STRADA GT  •  KARBON", "model": "sport_a", "color": Color.WHITE, "price": 700},
 	{"name": "AURORA  •  YARIŞ KIRMIZISI", "model": "concept", "color": Color(0.75, 0.04, 0.04), "price": 900},
 	{"name": "GOBLIN V12  •  GECE SİYAHI", "model": "goblin", "color": Color(0.025, 0.025, 0.03), "price": 1100},
@@ -44,7 +36,7 @@ const GARAGE := [
 const RIVALS := [
 	{"name": "KARTAL", "model": "goblin", "color": Color(0.03, 0.03, 0.035)},
 	{"name": "ŞAHİN", "model": "sport_c", "color": Color.WHITE},
-	{"name": "KURT", "model": "mohawk", "color": Color.WHITE},
+	{"name": "KURT", "model": "concept", "color": Color(0.85, 0.85, 0.83)},
 	{"name": "TİLKİ", "model": "concept", "color": Color(0.6, 0.05, 0.08)},
 	{"name": "ŞİMŞEK", "model": "sport_b", "color": Color.WHITE},
 	{"name": "BORA", "model": "goblin", "color": Color(0.9, 0.5, 0.02)},
@@ -61,6 +53,7 @@ var player: Dictionary
 var camera: Camera3D
 var cam_shake := 0.0
 var cam_dir := Vector3.ZERO
+var cam_pos := Vector3.ZERO
 var countdown := 0.0
 var race_time := 0.0
 var finish_order: Array = []
@@ -119,7 +112,9 @@ func _ready() -> void:
 	_go_menu()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--tool="):
-			add_child(load("res://tools/%s.gd" % arg.substr(7)).new())
+			var tool: Node = load("res://tools/%s.gd" % arg.substr(7)).new()
+			tool.name = arg.substr(7)
+			add_child(tool)
 
 
 func _add_sfx(id: String, stream: AudioStream) -> void:
@@ -201,27 +196,26 @@ func _build_world() -> void:
 # ---------------------------------------------------------------- araçlar
 
 func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, lane: float, info := {}) -> Dictionary:
-	var root := Node3D.new()
-	add_child(root)
-	var body := Node3D.new()          # süspansiyon eğimi bu düğüme uygulanır
-	root.add_child(body)
-	body.position.y = 0.5
+	var body := Car.new()
+	add_child(body)
 	var model := _load_model(model_id, body)
-	model.position.y -= 0.52   # 2 cm gömülü: tekerlekler yere tam bassın
 	if MODELS[model_id].paint: _paint(model, color)
 	_fix_glass(model)
-	var wheels := _rig_wheels(model, MODELS[model_id].wheels)
+	var wheels := _rig_wheels(body, model, MODELS[model_id].wheels)
+	body.setup(wheels, 1250.0)
+	var tune: Dictionary = info.get("tune", {})
+	for k in tune: body.set(k, tune[k])
 	var flames: Array = []
 	for x in [-0.42, 0.42]:
 		var f := _make_flame()
-		f.position = Vector3(x, 0.42, -2.25)
-		root.add_child(f)
+		f.position = Vector3(x, 0.45, -2.25)
+		body.add_child(f)
 		flames.append(f)
 	var smoke := _make_smoke()
 	smoke.position = Vector3(0, 0.3, -1.5)
-	root.add_child(smoke)
+	body.add_child(smoke)
 	var sparks := _make_sparks()
-	root.add_child(sparks)
+	add_child(sparks)
 	var tag: Label3D = null
 	if not is_player:
 		tag = Label3D.new()
@@ -234,22 +228,18 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 		tag.position = Vector3(0, 2.3, 0)
 		tag.render_priority = 10
 		tag.outline_render_priority = 9
-		root.add_child(tag)
+		body.add_child(tag)
 	car_seq += 1
-	var p: Vector3 = track.point(start_s, lane)
-	var t: Vector3 = track.tangent(start_s)
 	var car := {
-		"id": car_seq, "root": root, "body": body, "model": model, "model_id": model_id, "wheels": wheels,
+		"id": car_seq, "body": body, "root": body, "model": model, "model_id": model_id,
 		"flames": flames, "smoke": smoke, "sparks": sparks, "tag": tag, "name": info.get("name", "SEN"), "player": is_player,
-		"pos": p, "vel": Vector3.ZERO, "yaw": atan2(t.x, t.z), "yaw_rate": 0.0,
-		"s": start_s, "x": lane, "idx": track.idx(start_s), "vf": 0.0, "vl": 0.0,
-		"steer": 0.0, "throttle": 0.0, "brake": false, "drift": false,
-		"top": info.get("top", BASE_TOP), "acc": info.get("acc", 15.0), "skill": info.get("skill", 1.0),
-		"nitro": 0.0, "boost": false, "finished": false, "wreck": 0.0,
-		"wall_cd": 0.0, "bump_cd": 0.0, "ai_nitro_cd": randf_range(4, 9), "line": lane,
-		"acc_long": 0.0, "acc_lat": 0.0, "stuck": 0.0, "wrong": 0.0,
+		"s": start_s, "x": lane, "idx": track.idx(start_s), "vf": 0.0,
+		"skill": info.get("skill", 1.0), "top": info.get("top", 80.0),
+		"nitro": 0.0, "boost": false, "finished": false,
+		"bump_cd": 0.0, "ai_nitro_cd": randf_range(4, 9), "line": lane, "stuck": 0.0, "wrong": 0.0, "flip": 0.0,
 	}
-	_place(car, 0.0)
+	var p := track.point(start_s, lane)
+	body.place(p, track.tangent(start_s), 0.0)
 	return car
 
 
@@ -330,36 +320,51 @@ func _fix_glass(model: Node3D) -> void:
 				m3.set_surface_override_material(i, g)
 
 
-## Tekerlekleri merkezlerinde dönebilsinler diye pivot düğümlerine bağlar.
-func _rig_wheels(model: Node3D, pattern: String) -> Array:
+## Tekerlek görsellerini bulur, merkezlerinde pivot oluşturur ve fizik bağlantı noktalarını hesaplar.
+func _rig_wheels(body: Node3D, model: Node3D, pattern: String) -> Array:
 	var out: Array = []
-	if pattern == "": return out
-	var body: Node3D = model.get_parent()
-	for w in model.find_children(pattern, "Node3D", true, false):
-		var node := w as Node3D
-		if node.get_parent().name.begins_with("bone_rotation") or node.get_parent().name.begins_with("mc-wheel"): continue
-		var meshes: Array = node.find_children("*", "MeshInstance3D", true, false)
-		if node is MeshInstance3D: meshes.append(node)
-		if meshes.is_empty() or not (meshes[0] as MeshInstance3D).visible: continue
-		var aabb := AABB()
-		var first := true
-		for m in meshes:
-			var b: AABB = node.global_transform.affine_inverse() * m.global_transform * m.get_aabb()
-			aabb = b if first else aabb.merge(b)
-			first = false
-		var parent: Node3D = node.get_parent()
-		var center: Vector3 = node.transform * aabb.get_center()
-		var pivot := Node3D.new()
-		pivot.position = center
-		parent.add_child(pivot)
-		parent.remove_child(node)
-		pivot.add_child(node)
-		node.transform.origin = node.transform.origin - center
-		var inv: Basis = parent.global_basis.orthonormalized().inverse()
-		var rb: Basis = body.global_basis.orthonormalized()
-		var nm := String(node.name)
-		var front: bool = nm.contains("Front") or nm.contains("Ft") or nm.contains("_F")
-		out.append({"pivot": pivot, "front": front, "axle": (inv * (rb * Vector3.RIGHT)).normalized(), "up": (inv * (rb * Vector3.UP)).normalized(), "spin": 0.0, "base": pivot.basis})
+	var inv_body := body.global_transform.affine_inverse()
+	if pattern != "":
+		for w in model.find_children(pattern, "Node3D", true, false):
+			var node := w as Node3D
+			var pn := String(node.get_parent().name)
+			if pn.begins_with("bone_rotation") or pn.begins_with("mc-wheel") or pn.begins_with("Wheel"): continue
+			var meshes: Array = node.find_children("*", "MeshInstance3D", true, false)
+			if node is MeshInstance3D: meshes.append(node)
+			if meshes.is_empty() or not (meshes[0] as MeshInstance3D).is_visible_in_tree(): continue
+			var aabb := AABB()
+			var first := true
+			for m in meshes:
+				var b: AABB = node.global_transform.affine_inverse() * m.global_transform * m.get_aabb()
+				aabb = b if first else aabb.merge(b)
+				first = false
+			var parent: Node3D = node.get_parent()
+			var center: Vector3 = node.transform * aabb.get_center()
+			var pivot := Node3D.new()
+			pivot.position = center
+			parent.add_child(pivot)
+			parent.remove_child(node)
+			pivot.add_child(node)
+			node.transform.origin = node.transform.origin - center
+			var c_body: Vector3 = inv_body * pivot.global_position
+			var to_parent: Basis = parent.global_basis.inverse() * body.global_basis
+			var inv: Basis = parent.global_basis.orthonormalized().inverse()
+			var rb: Basis = body.global_basis.orthonormalized()
+			var radius := clampf(c_body.y, 0.28, 0.5)
+			out.append({
+				"mount": Vector3(c_body.x, c_body.y + 0.25, c_body.z), "radius": radius, "front": c_body.z > 0.0,
+				"pivot": pivot, "base_pos": pivot.position, "base_center": c_body, "to_parent": to_parent,
+				"base_basis": pivot.basis, "axle": (inv * (rb * Vector3.RIGHT)).normalized(), "up": (inv * (rb * Vector3.UP)).normalized(),
+				"spin": 0.0, "contact": false, "comp": 0.0,
+			})
+	if out.size() < 4:
+		# Tekerlek düğümü olmayan model (tek parça tekerlekler): standart bağlantı noktaları
+		out.clear()
+		for z in [1.38, -1.38]:
+			for x in [0.82, -0.82]:
+				out.append({"mount": Vector3(x, 0.6, z), "radius": 0.35, "front": z > 0.0, "pivot": null,
+					"base_pos": Vector3.ZERO, "base_center": Vector3(x, 0.35, z), "to_parent": Basis(),
+					"base_basis": Basis(), "axle": Vector3.RIGHT, "up": Vector3.UP, "spin": 0.0, "contact": false, "comp": 0.0})
 	return out
 
 
@@ -456,26 +461,9 @@ func _make_sparks() -> CPUParticles3D:
 	return p
 
 
-## Görsel: konum, yön, gövde eğimi (ağırlık aktarımı), tekerlekler.
-func _place(car: Dictionary, delta: float) -> void:
-	var root: Node3D = car.root
-	root.position = car.pos
-	root.rotation.y = car.yaw
-	var body: Node3D = car.body
-	var pitch: float = clampf(-car.acc_long * 0.0015, -0.022, 0.022)
-	var roll: float = clampf(car.acc_lat * 0.0008, -0.035, 0.035)
-	if delta > 0.0:
-		body.rotation.x = lerpf(body.rotation.x, pitch, 1.0 - exp(-delta * 6.0))
-		body.rotation.z = lerpf(body.rotation.z, roll, 1.0 - exp(-delta * 6.0))
-	for w in car.wheels:
-		w.spin += car.vf * delta / 0.34
-		var steer_a: float = -car.steer * 0.45 if w.front else 0.0
-		w.pivot.basis = Basis(w.up, steer_a) * Basis(w.axle, w.spin) * w.base
-
-
 ## Pist koordinatlarını (ilerleme s, yanal x) güncelle.
 func _track_sync(car: Dictionary) -> void:
-	var pr: Array = track.project(car.pos, car.idx)
+	var pr := track.project(car.body.global_position, car.idx)
 	car.idx = pr[0]
 	car.x = pr[1]
 	var s_raw: float = pr[2]
@@ -484,163 +472,72 @@ func _track_sync(car: Dictionary) -> void:
 	if d > track.length * 0.5: d -= track.length
 	elif d < -track.length * 0.5: d += track.length
 	car.s += d
+	car.vf = car.body.speed
 
 
-## Ortak sürüş fiziği (dünya koordinatlarında, arcade).
-func _physics(car: Dictionary, delta: float) -> void:
-	var top: float = car.top + (NITRO_ADD if car.boost else 0.0)
+## Her fizik adımında: kontroller, nitro, efektler, kurtarma.
+func _drive(car: Dictionary, delta: float) -> void:
+	var body: Car = car.body
+	_track_sync(car)
+	var test_mode: bool = get_node_or_null("accel") != null or get_node_or_null("handling") != null
+	if car.player and test_mode: pass
+	elif car.player and not car.finished: _player_input(car, delta)
+	else: _ai_input(car, delta)
 	if car.boost:
 		car.nitro -= delta * (0.2 - (0.025 * int(save.nitro) if car.player else 0.0))
 		if car.nitro <= 0.0:
 			car.nitro = 0.0
 			car.boost = false
-	for f in car.flames: f.emitting = car.boost
-	var wrecked: bool = car.wreck > 0.0
-	# Direksiyon: hızla azalan dönüş oranı; drift'te daha keskin
-	var vf_prev: float = car.vf
-	var spd: float = maxf(car.vf, 0.0)
-	var max_rate: float = lerpf(1.9, 0.95, clampf(spd / 75.0, 0.0, 1.0)) * clampf(spd / 6.0, 0.0, 1.0)
-	var target_rate: float = car.steer * max_rate * (1.45 if car.drift else 1.0)
-	if wrecked: target_rate = 7.0 * signf(car.yaw_rate if car.yaw_rate != 0.0 else 1.0)
-	car.yaw_rate = lerpf(car.yaw_rate, target_rate, 1.0 - exp(-delta * (3.0 if wrecked else 7.0)))
-	car.yaw -= car.yaw_rate * delta
-	var fwd := Vector3(sin(car.yaw), 0, cos(car.yaw))
-	var right := fwd.cross(Vector3.UP)
-	var vel: Vector3 = car.vel
-	var vf: float = vel.dot(fwd)
-	var vl: float = vel.dot(right)
-	var racing: bool = state == State.RACE or car.finished
-	# Boyuna
-	if wrecked:
-		vf = move_toward(vf, 0.0, 18.0 * delta)
-	elif car.brake and not car.drift:
-		vf = move_toward(vf, 0.0, BRAKE_DEC * delta)
-	elif racing and car.throttle > 0.0:
-		var acc: float = car.acc * pow(clampf(1.0 - vf / top, 0.0, 1.0), 0.6) + (14.0 if car.boost else 0.0)
-		if vf > top: vf = move_toward(vf, top, 7.0 * delta)
-		else: vf = minf(vf + acc * car.throttle * delta, top)
-	else:
-		vf = move_toward(vf, 0.0, 3.0 * delta)
-	if car.drift: vf = move_toward(vf, 0.0, 5.0 * delta)
-	var offroad: bool = absf(car.x) > Track.HALF
-	if offroad and vf > 38.0: vf = move_toward(vf, 38.0, 18.0 * delta)
-	# Yanal tutuş
-	var grip: float = DRIFT_GRIP if car.drift else GRIP
-	if wrecked: grip = 1.0
-	if offroad: grip *= 0.7
-	vl *= exp(-grip * delta)
-	car.vel = fwd * vf + right * vl
-	car.pos += car.vel * delta
-	car.pos.y = 0.0
-	car.vf = vf
-	car.vl = vl
-	car.acc_long = lerpf(car.acc_long, (vf - vf_prev) / maxf(delta, 0.001), 0.2)
-	car.acc_lat = lerpf(car.acc_lat, vf * car.yaw_rate, 0.2)
-	_track_sync(car)
-	_walls(car, delta)
-	if wrecked:
-		car.wreck -= delta
-		if car.wreck <= 0.0: _recover(car, false)
-	var sliding: bool = absf(vl) > 5.0 and vf > 15.0
-	car.smoke.emitting = sliding or car.drift and vf > 20.0
-	_place(car, delta)
+	body.nitro_on = car.boost and body.throttle > 0.1
+	for f in car.flames: f.emitting = body.nitro_on
+	car.smoke.emitting = body.slip > 0.35 and absf(body.speed) > 8.0 and body.on_ground >= 2
+	# Kurtarma: ters dönme, takılma, ters yön, pist dışı
+	var up_dot: float = body.global_basis.y.dot(Vector3.UP)
+	car.flip = car.flip + delta if up_dot < 0.35 else 0.0
+	var racing: bool = state == State.RACE
+	car.stuck = car.stuck + delta if racing and absf(body.speed) < 2.0 and body.throttle > 0.5 else 0.0
+	var fwd: Vector3 = body.global_basis.z
+	car.wrong = car.wrong + delta if racing and fwd.dot(track.tangent(car.s)) < -0.3 and body.speed > 3.0 else 0.0
+	if debug_log and absf(car.x) > Track.HALF - 0.6: car.wall = car.get("wall", 0.0) + delta
+	var off: bool = absf(car.x) > Track.HALF + 4.0 or body.global_position.y < track.point(car.s).y - 6.0
+	if test_mode and car.player: return
+	if car.flip > 1.5 or car.stuck > 3.0 or car.wrong > 2.5 or off or (car.player and Input.is_physical_key_pressed(KEY_R)):
+		_recover(car)
 
 
-## Bariyerler: içeri it, hızın duvara dik bileşenini sektir, sürtünme.
-func _walls(car: Dictionary, delta: float) -> void:
-	car.wall_cd -= delta
-	if absf(car.x) <= WALL: return
-	var i: int = car.idx
-	var n: Vector3 = track.right[i] * signf(car.x)
-	var pen: float = absf(car.x) - WALL
-	car.pos -= n * pen
-	car.x = signf(car.x) * WALL
-	var vn: float = car.vel.dot(n)
-	if vn > 0.0:
-		car.vel -= n * vn * 1.3
-		car.vel *= 1.0 - minf(0.25, vn * 0.015)
-		var ty: float = atan2(track.tan[i].x, track.tan[i].z)
-		car.yaw = lerp_angle(car.yaw, ty, minf(0.25, vn * 0.03))
-		car.yaw_rate *= 0.5
-		if car.wall_cd <= 0.0 and vn > 3.0:
-			car.wall_cd = 0.35
-			car.wall_hits = car.get("wall_hits", 0) + 1
-			if debug_log: print("  DUVAR ", car.name, " x=", snappedf(car.x, 0.1), " s=", int(fposmod(car.s, track.length)), " vn=", snappedf(vn, 0.1), " v=", int(car.vf * 3.6), " k=", snappedf(track.curvature(car.s), 0.0001))
-			var sp: CPUParticles3D = car.sparks
-			sp.global_position = car.pos + n * 1.0 + Vector3.UP * 0.5
-			sp.restart()
-			if car.player:
-				cam_shake = clampf(vn * 0.06, 0.2, 0.8)
-				sfx.impact.volume_db = linear_to_db(clampf(vn / 15.0, 0.3, 1.0))
-				sfx.impact.play()
-				Input.vibrate_handheld(int(clampf(vn * 8.0, 40, 200)))
+## Oyuncu/yapay zekâ çarpışmaları: sert vuruşta sarsıntı, ses, takedown.
+func _contacts(delta: float) -> void:
+	for c in cars: c.bump_cd -= delta
+	for c in cars:
+		if c.player: continue
+		var a: Car = player.body
+		var b: Car = c.body
+		var d := b.global_position - a.global_position
+		if d.length() > 5.2: continue
+		var rel: float = (a.linear_velocity - b.linear_velocity).dot(d.normalized())
+		if rel < 3.0 or player.bump_cd > 0.0: continue
+		player.bump_cd = 0.5
+		cam_shake = maxf(cam_shake, clampf(rel * 0.05, 0.2, 0.7))
+		sfx.impact.volume_db = linear_to_db(clampf(rel / 15.0, 0.3, 1.0))
+		sfx.impact.play()
+		var sp: CPUParticles3D = c.sparks
+		sp.global_position = (a.global_position + b.global_position) * 0.5 + Vector3.UP * 0.6
+		sp.restart()
+		Input.vibrate_handheld(int(clampf(rel * 10.0, 40, 200)))
+		# Takedown: hızlı ve sert vuruş rakibi savurur
+		if rel > 9.0 and not c.finished:
+			b.apply_central_impulse(d.normalized() * b.mass * 4.0 + Vector3.UP * b.mass * 1.5)
+			b.apply_torque_impulse(Vector3.UP * b.mass * 6.0 * (1.0 if randf() < 0.5 else -1.0))
+			player.nitro = minf(player.nitro + 0.35, 1.0)
+			_popup("TAKEDOWN!  +NİTRO", Color(1.0, 0.4, 0.25))
 
 
-## Araç-araç çarpışması: her araca iki daire, itme + darbe + dönme.
-func _collide(delta: float) -> void:
-	for i in cars.size():
-		cars[i].bump_cd -= delta
-	for i in cars.size():
-		for j in range(i + 1, cars.size()):
-			var a: Dictionary = cars[i]
-			var b: Dictionary = cars[j]
-			if a.pos.distance_squared_to(b.pos) > 36.0: continue
-			var fa: Vector3 = Vector3(sin(a.yaw), 0, cos(a.yaw))
-			var fb: Vector3 = Vector3(sin(b.yaw), 0, cos(b.yaw))
-			for oa in [-CIRCLE_OFF, CIRCLE_OFF]:
-				for ob in [-CIRCLE_OFF, CIRCLE_OFF]:
-					var ca: Vector3 = a.pos + fa * oa
-					var cb: Vector3 = b.pos + fb * ob
-					var d: Vector3 = ca - cb
-					d.y = 0.0
-					var dist: float = d.length()
-					if dist >= CAR_R * 2.0 or dist < 0.001: continue
-					var n: Vector3 = d / dist
-					var pen: float = CAR_R * 2.0 - dist
-					a.pos += n * pen * 0.5
-					b.pos -= n * pen * 0.5
-					var rel: float = (a.vel - b.vel).dot(n)
-					if rel >= 0.0: continue
-					var jimp: float = -(1.0 + 0.35) * rel * 0.5
-					a.vel += n * jimp
-					b.vel -= n * jimp
-					a.yaw_rate += clampf(fa.cross(n).y * oa * jimp * 0.12, -2.0, 2.0)
-					b.yaw_rate -= clampf(fb.cross(n).y * ob * jimp * 0.12, -2.0, 2.0)
-					if debug_log and -rel > 4.0: print("  ÇARPIŞMA ", a.name, "-", b.name, " güç=", snappedf(-rel, 0.1), " s=", int(fposmod(a.s, track.length)))
-					_impact(a, b, -rel)
-
-
-func _impact(a: Dictionary, b: Dictionary, strength: float) -> void:
-	if not (a.player or b.player): return
-	var me: Dictionary = a if a.player else b
-	var other: Dictionary = b if a.player else a
-	if me.bump_cd > 0.0: return
-	me.bump_cd = 0.4
-	cam_shake = maxf(cam_shake, clampf(strength * 0.05, 0.2, 0.7))
-	sfx.impact.volume_db = linear_to_db(clampf(strength / 15.0, 0.3, 1.0))
-	sfx.impact.play()
-	var sp: CPUParticles3D = other.sparks
-	sp.global_position = (a.pos + b.pos) * 0.5 + Vector3.UP * 0.6
-	sp.restart()
-	# Sert vuruş + nitro ya da yüksek hız: rakip kaza yapar (takedown)
-	if strength > 7.0 and other.wreck <= 0.0 and not other.finished and (me.boost or me.vf > other.vf + 4.0):
-		other.wreck = 1.6
-		other.yaw_rate = 6.0 * (1.0 if randf() < 0.5 else -1.0)
-		me.nitro = minf(me.nitro + 0.35, 1.0)
-		_popup("TAKEDOWN!  +NİTRO", Color(1.0, 0.4, 0.25))
-		Input.vibrate_handheld(150)
-
-
-## Kaza / ters yön / takılma sonrası aracı pistin üzerine düzgünce geri koy.
-func _recover(car: Dictionary, to_center: bool) -> void:
+func _recover(car: Dictionary) -> void:
+	if debug_log: print("  KURTARMA ", car.name, " s=", int(fposmod(car.s, track.length)), " x=", snappedf(car.x, 0.1), " flip=", snappedf(car.flip, 0.1), " stuck=", snappedf(car.stuck, 0.1), " wrong=", snappedf(car.wrong, 0.1))
 	var s: float = car.s
-	var x: float = 0.0 if to_center else clampf(car.x, -Track.HALF + 2.0, Track.HALF - 2.0)
-	car.pos = track.point(s, x)
-	var t: Vector3 = track.tangent(s)
-	car.yaw = atan2(t.x, t.z)
-	car.yaw_rate = 0.0
-	car.vel = t * clampf(car.vf, 18.0, 30.0)
-	car.wreck = 0.0
+	var x: float = clampf(car.x, -Track.HALF + 2.5, Track.HALF - 2.5)
+	car.body.place(track.point(s, x), track.tangent(s), clampf(car.body.speed, 15.0, 30.0))
+	car.flip = 0.0
 	car.stuck = 0.0
 	car.wrong = 0.0
 	if car.player:
@@ -648,43 +545,33 @@ func _recover(car: Dictionary, to_center: bool) -> void:
 
 
 func _player_input(car: Dictionary, delta: float) -> void:
-	var u: float = 0.0
-	if _pressed("left"): u -= 1.0
-	if _pressed("right"): u += 1.0
-	var brake: bool = _pressed("brake")
+	var body: Car = car.body
 	if autopilot:
 		_ai_input(car, delta)
-		u = car.steer
-		brake = car.brake
-	# Klavye dijital: yumuşak direksiyon
-	car.steer = move_toward(car.steer, u, delta * (4.0 if absf(u) > 0.0 else 7.0))
-	# Şerit yardımcısı (gündelik oyuncu için): direksiyon bırakılınca pist yönüne hizala
-	if absf(u) < 0.05 and not autopilot and car.wreck <= 0.0:
-		var t: Vector3 = track.tangent(car.s + 18.0)
-		var diff: float = wrapf(atan2(t.x, t.z) - car.yaw, -PI, PI)
-		car.steer += clampf(-diff * 1.6, -0.35, 0.35)
-	car.throttle = 1.0
-	car.drift = brake and absf(car.steer) > 0.25 and car.vf > 22.0
-	car.brake = brake
-	var straight_ahead: bool = absf(track.curvature(car.s + 60.0)) < 0.002 and absf(track.curvature(car.s + 140.0)) < 0.002
-	if (_pressed("nitro") or (autopilot and car.nitro > 0.95 and straight_ahead)) and car.nitro > 0.08: car.boost = true
-	# Nitro kazanımı: zamanla, drift ve kaymayla
-	if not car.boost: car.nitro = minf(car.nitro + delta * (0.03 + 0.008 * int(save.nitro)), 1.0)
-	if car.drift or absf(car.vl) > 5.0: car.nitro = minf(car.nitro + delta * 0.2, 1.0)
-	skid.volume_db = lerpf(skid.volume_db, -8.0 if (car.drift or absf(car.vl) > 5.0) and car.vf > 15.0 else -60.0, delta * 8.0)
-	# Ters yön / takılma: otomatik toparla
-	var t2: Vector3 = track.tangent(car.s)
-	var fwd: Vector3 = Vector3(sin(car.yaw), 0, cos(car.yaw))
-	car.wrong = car.wrong + delta if fwd.dot(t2) < -0.2 else 0.0
-	car.stuck = car.stuck + delta if car.vf < 4.0 and state == State.RACE else 0.0
-	if car.wrong > 2.0 or car.stuck > 2.5 or Input.is_physical_key_pressed(KEY_R):
-		_recover(car, true)
+		if car.nitro > 0.95 and absf(track.curvature(car.s + 60.0)) < 0.002 and absf(track.curvature(car.s + 140.0)) < 0.002:
+			car.boost = true
+	else:
+		var u := 0.0
+		if _pressed("left"): u -= 1.0
+		if _pressed("right"): u += 1.0
+		# Klavye dijital: yumuşak direksiyon
+		body.steer = move_toward(body.steer, u, delta * (3.5 if absf(u) > 0.0 else 6.0))
+		body.throttle = 1.0 if _pressed("gas") else 0.0
+		body.brake = 1.0 if _pressed("brake") else 0.0
+		body.handbrake = _pressed("handbrake")
+		if _pressed("nitro") and car.nitro > 0.08: car.boost = true
+	# Nitro kazanımı: zamanla, kaymayla (drift) ve hava süresiyle
+	if not car.boost: car.nitro = minf(car.nitro + delta * (0.025 + 0.008 * int(save.nitro)), 1.0)
+	if body.slip > 0.35 and body.speed > 15.0: car.nitro = minf(car.nitro + delta * 0.22, 1.0)
+	if body.air_time > 0.25: car.nitro = minf(car.nitro + delta * 0.3, 1.0)
+	skid.volume_db = lerpf(skid.volume_db, -6.0 if body.slip > 0.35 and absf(body.speed) > 8.0 and body.on_ground >= 2 else -60.0, delta * 8.0)
 
 
-## Yapay zekâ sürücü: yarış çizgisini takip et, viraj öncesi yavaşla, sollamak için şerit değiştir.
+## Yapay zekâ sürücü: yarış çizgisini takip eder, virajdan önce frenler, sollar, nitro kullanır.
 func _ai_input(car: Dictionary, delta: float) -> void:
-	var v: float = maxf(car.vf, 10.0)
-	var look: float = 9.0 + v * 0.42
+	var body: Car = car.body
+	var v: float = maxf(body.speed, 8.0)
+	var look: float = 8.0 + v * 0.45
 	var k: float = track.curvature(car.s + look)
 	var line: float = clampf(signf(k) * minf(absf(k) * 450.0, 3.5), -4.0, 4.0)
 	var follow: float = INF
@@ -693,39 +580,34 @@ func _ai_input(car: Dictionary, delta: float) -> void:
 		var ds: float = o.s - car.s
 		if ds > 0.0 and ds < 30.0 and absf(o.x - car.x) < 3.0:
 			line = o.x - 4.2 if o.x > 0.0 else o.x + 4.2
-			# Yer açılmadıysa çarpma, arkasında kal
-			if ds < 9.0 and absf(o.x - car.x) < 2.3: follow = minf(follow, o.vf - 1.0)
+			if ds < 10.0 and absf(o.x - car.x) < 2.3: follow = minf(follow, o.vf - 1.0)
 		elif ds > -6.0 and ds < 6.0 and absf(o.x - line) < 2.6:
-			line = car.x   # yanında araç var: o şeride geçme
-	car.line = move_toward(car.line, clampf(line, -WALL + 0.8, WALL - 0.8), delta * 6.0)
+			line = car.x
+	car.line = move_toward(car.line, clampf(line, -Track.HALF + 2.0, Track.HALF - 2.0), delta * 5.0)
+	# Saf takip (pure pursuit) direksiyonu
 	var target: Vector3 = track.point(car.s + look, car.line)
-	var dir: Vector3 = target - car.pos
-	var want: float = atan2(dir.x, dir.z)
-	var diff: float = wrapf(want - car.yaw, -PI, PI)
-	# İleri besleme (virajın gerektirdiği dönüş) + geri besleme (hedef noktaya yönel)
-	var spd_ai: float = maxf(car.vf, 5.0)
-	var rate_max: float = lerpf(1.9, 0.95, clampf(spd_ai / 75.0, 0.0, 1.0)) * clampf(spd_ai / 6.0, 0.0, 1.0)
-	var ff: float = track.curvature(car.s + spd_ai * 0.25) * spd_ai / maxf(rate_max, 0.1)
-	car.steer = clampf(ff * 0.6 - diff * 2.2, -1.0, 1.0)
-	# Hedef hız: önümüzdeki virajlara göre frenleme mesafesi
-	var top: float = car.top + (NITRO_ADD if car.boost else 0.0)
-	var vt: float = top
+	var local: Vector3 = body.global_transform.affine_inverse() * target
+	var ang: float = atan2(-local.x, local.z)        # + sağa
+	var max_a: float = lerpf(body.max_steer, 0.11, clampf(absf(body.speed) / 70.0, 0.0, 1.0))
+	body.steer = clampf(ang * 2.2 / maxf(max_a, 0.05) * 0.35, -1.0, 1.0)
+	# Hedef hız: önümüzdeki virajlar için fren mesafesi
+	var vt: float = car.top
 	var d := 0.0
-	while d < 160.0:
+	while d < 180.0:
 		var kk: float = absf(track.curvature(car.s + d))
 		var vc: float = sqrt(A_LAT_AI * car.skill / maxf(kk, 0.0001))
-		vt = minf(vt, sqrt(vc * vc + 2.0 * 26.0 * d))
+		vt = minf(vt, sqrt(vc * vc + 2.0 * 14.0 * d))
 		d += 8.0
 	vt = minf(vt, follow)
 	if not car.player:
 		var gap: float = car.s - player.s
-		if gap > 70.0: vt *= 0.92
+		if gap > 70.0: vt *= 0.93
 		elif gap < -70.0: vt *= 1.06
-	car.throttle = 1.0 if car.vf < vt else 0.0
-	car.brake = car.vf > vt + 4.0
-	car.drift = false
-	if car.finished and not car.player:
-		car.throttle = 1.0 if car.vf < 35.0 else 0.0
+		if car.finished: vt = minf(vt, 30.0)
+	car.vt = vt
+	body.throttle = 1.0 if body.speed < vt - 1.0 else (0.3 if body.speed < vt + 1.0 else 0.0)
+	body.brake = 1.0 if body.speed > vt + 5.0 else 0.0
+	body.handbrake = false
 	if not car.player:
 		car.ai_nitro_cd -= delta
 		if car.ai_nitro_cd <= 0.0 and absf(k) < 0.002 and absf(track.curvature(car.s + 150.0)) < 0.002 and state == State.RACE:
@@ -737,7 +619,9 @@ func _ai_input(car: Dictionary, delta: float) -> void:
 # ---------------------------------------------------------------- yarış
 
 func _setup_grid() -> void:
-	for c in cars: c.root.queue_free()
+	for c in cars:
+		c.body.queue_free()
+		c.sparks.queue_free()
 	cars.clear()
 	finish_order.clear()
 	var level := int(save.level)
@@ -746,17 +630,20 @@ func _setup_grid() -> void:
 	rivals.shuffle()
 	for i in 4:
 		var row := i / 2
-		var lane: float = -2.25 if i % 2 == 0 else 2.25
-		var s := -10.0 - row * 9.0 - (4.0 if i % 2 else 0.0)
+		var lane: float = -2.6 if i % 2 == 0 else 2.6
+		var s := -12.0 - row * 10.0 - (5.0 if i % 2 else 0.0)
 		if i == 3:
-			player = _make_car(GARAGE[paint_index].model, GARAGE[paint_index].color, true, s, lane, {"top": BASE_TOP + 2.0 * int(save.motor), "acc": 15.0 + int(save.motor)})
+			var g: Dictionary = GARAGE[paint_index]
+			player = _make_car(g.model, g.color, true, s, lane, {"tune": {"power_kw": 300.0 + 22.0 * int(save.motor)}})
 			cars.append(player)
 		else:
 			var r: Dictionary = rivals[i]
 			cars.append(_make_car(r.model, r.color, false, s, lane, {
-				"name": r.name, "top": lerpf(60.0, 80.0, diff) + (2 - i) * 1.2 + randf_range(-1.0, 1.0),
-				"acc": lerpf(12.5, 16.5, diff), "skill": lerpf(0.82, 1.0, diff) + randf_range(-0.03, 0.03),
+				"name": r.name, "top": lerpf(62.0, 82.0, diff) + (2 - i) * 1.2 + randf_range(-1.0, 1.0),
+				"skill": lerpf(0.8, 1.0, diff) + randf_range(-0.03, 0.03),
+				"tune": {"power_kw": lerpf(280.0, 340.0, diff)},
 			}))
+	for c in cars: c.body.freeze = true
 
 
 func _go_menu() -> void:
@@ -813,12 +700,26 @@ func _finish_player() -> void:
 	sfx.coin.play()
 
 
+func _physics_process(delta: float) -> void:
+	if state != State.RACE and state != State.FINISHED: return
+	var ranks_before := _ranks()
+	for c in cars: _drive(c, delta)
+	_contacts(delta)
+	for c in cars:
+		if not c.finished and c.s >= LAPS * track.length:
+			c.finished = true
+			finish_order.append(c)
+			if c.player: _finish_player()
+	_overtake_check(ranks_before)
+	_near_miss()
+
+
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.05)
 	match state:
 		State.MENU:
 			menu_angle += delta * 0.25
-			var p: Vector3 = player.root.position
+			var p: Vector3 = player.body.global_position
 			var f: Vector3 = track.tangent(player.s)
 			var r: Vector3 = f.cross(Vector3.UP)
 			var off: Vector3 = (-f * cos(menu_angle) + r * sin(menu_angle)) * 7.5
@@ -831,6 +732,7 @@ func _process(delta: float) -> void:
 			countdown -= delta
 			if countdown <= 0.0:
 				state = State.RACE
+				for c in cars: c.body.freeze = false
 				big_label.text = "GO!"
 				_pop(big_label)
 				sfx.go.play()
@@ -838,30 +740,15 @@ func _process(delta: float) -> void:
 				big_label.text = str(ceili(countdown))
 				_pop(big_label)
 				sfx.beep.play()
-			engine.pitch_scale = 0.8 + (0.5 if _pressed("nitro") else 0.0)
-			for c in cars: _place(c, delta)
+			engine.pitch_scale = 0.8 + (0.6 if _pressed("gas") else 0.0)
 		State.RACE, State.FINISHED:
 			if state == State.RACE: race_time += delta
-			var ranks_before := _ranks()
-			for c in cars:
-				if c.player and not c.finished: _player_input(c, delta)
-				elif c.wreck <= 0.0: _ai_input(c, delta)
-			# Kararlılık için iki alt adım
-			for k in 2:
-				for c in cars: _physics(c, delta * 0.5)
-				_collide(delta * 0.5)
-			_near_miss()
-			for c in cars:
-				if not c.finished and c.s >= LAPS * track.length:
-					c.finished = true
-					finish_order.append(c)
-					if c.player: _finish_player()
-			_overtake_check(ranks_before)
-			# Vites hissi: her vitesde devir yükselip düşer
-			var kmh: float = maxf(player.vf, 0.0) * 3.6
+			var body: Car = player.body
+			var kmh: float = absf(body.speed) * 3.6
 			var gear: int = mini(int(kmh / 55.0), 5)
 			var rpm: float = fmod(kmh, 55.0) / 55.0 if gear < 5 else clampf((kmh - 275.0) / 80.0, 0.0, 1.0)
-			engine.pitch_scale = 0.75 + rpm * 0.75 + gear * 0.06 + (0.1 if player.boost else 0.0)
+			var load_f: float = 0.15 if body.throttle > 0.1 else 0.0
+			engine.pitch_scale = lerpf(engine.pitch_scale, 0.7 + rpm * 0.75 + gear * 0.06 + load_f + (0.1 if player.boost else 0.0), delta * 10.0)
 	_update_camera(delta)
 	_update_hud()
 
@@ -871,7 +758,6 @@ func _ranks() -> Dictionary:
 	sorted.sort_custom(func(a, b): return a.s > b.s)
 	var out := {}
 	for i in sorted.size(): out[sorted[i].id] = i + 1
-	# Bitirenler bitiş sırasına göre
 	for i in finish_order.size(): out[finish_order[i].id] = i + 1
 	return out
 
@@ -898,26 +784,32 @@ func _overtake_check(before: Dictionary) -> void:
 
 
 func _update_camera(delta: float) -> void:
-	var root: Node3D = player.root
-	var fwd := Vector3(sin(player.yaw), 0, cos(player.yaw))
-	var vdir: Vector3 = player.vel.normalized() if player.vel.length() > 5.0 else fwd
-	var want: Vector3 = fwd.lerp(vdir, 0.5).normalized()
-	# Sadece yön yumuşatılır; mesafe sabit kalır. Drift'te kamera hafif geride kalır, kayma görünür.
-	cam_dir = cam_dir.slerp(want, 1.0 - exp(-delta * 5.0)).normalized() if cam_dir.length() > 0.5 else want
-	var v: float = maxf(player.vf, 0.0)
-	var dist: float = 5.6 + v * 0.01 - (0.5 if player.boost else 0.0)
-	var height: float = 1.75 + v * 0.003
-	camera.position = root.position - cam_dir * dist + Vector3.UP * height
-	camera.look_at(root.position + cam_dir * 7.0 + Vector3.UP * 0.9)
+	var body: Car = player.body
+	var p: Vector3 = body.global_position
+	var fwd: Vector3 = body.global_basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var vel: Vector3 = body.linear_velocity
+	vel.y = 0.0
+	var vdir: Vector3 = vel.normalized() if vel.length() > 6.0 else fwd
+	var want: Vector3 = fwd.lerp(vdir, 0.4).normalized()
+	cam_dir = cam_dir.slerp(want, 1.0 - exp(-delta * 4.5)).normalized() if cam_dir.length() > 0.5 else want
+	var v: float = maxf(body.speed, 0.0)
+	var dist: float = 5.8 + v * 0.012 - (0.5 if player.boost else 0.0)
+	var target: Vector3 = p - cam_dir * dist + Vector3.UP * (1.9 + v * 0.003)
+	# Yükseklik yumuşak takip (zıplamalarda sarsmasın)
+	cam_pos = cam_pos.lerp(target, 1.0 - exp(-delta * 14.0)) if cam_pos != Vector3.ZERO else target
+	cam_pos.x = target.x
+	cam_pos.z = target.z
+	camera.position = cam_pos
+	camera.look_at(p + cam_dir * 7.0 + Vector3.UP * 0.9)
 	var fov: float = 64.0 + v * 0.13 + (10.0 if player.boost else 0.0)
 	camera.fov = lerpf(camera.fov, fov, delta * 3.0)
 	if cam_shake > 0.0:
 		cam_shake = maxf(cam_shake - delta * 2.5, 0.0)
 		var s := cam_shake * cam_shake * 0.35
 		camera.position += Vector3(randf_range(-s, s), randf_range(-s, s), randf_range(-s, s))
-	if player.boost and state == State.RACE:
-		var s2 := 0.02
-		camera.position += Vector3(randf_range(-s2, s2), randf_range(-s2, s2), 0)
+
 
 # ---------------------------------------------------------------- girdi
 
@@ -927,8 +819,10 @@ func _pressed(zone: String) -> bool:
 	match zone:
 		"left": return Input.is_physical_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)
 		"right": return Input.is_physical_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)
+		"gas": return Input.is_physical_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)
 		"brake": return Input.is_physical_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)
-		"nitro": return Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_SHIFT)
+		"handbrake": return Input.is_key_pressed(KEY_SPACE)
+		"nitro": return Input.is_key_pressed(KEY_SHIFT) or Input.is_physical_key_pressed(KEY_N)
 	return false
 
 
@@ -1109,7 +1003,8 @@ func _build_ui() -> void:
 	_box(nl, 0.5, 0, -210, 34, 70, 34)
 	speedo = Control.new()
 	speedo.set_script(load("res://scripts/speedo.gd"))
-	_box(speedo, 1, 1, -140, -140, 250, 250)
+	if touch_mode: _box(speedo, 0.5, 1, 0, -105, 200, 200)
+	else: _box(speedo, 1, 1, -140, -140, 250, 250)
 	hud.add_child(speedo)
 	big_label = _label("", 140, hud, Color(1.0, 0.85, 0.2))
 	_box(big_label, 0.5, 0.4, 0, 0, 800, 180)
@@ -1124,10 +1019,12 @@ func _build_ui() -> void:
 	root.add_child(controls)
 	zones["left"] = _zone(controls, "‹", 0, 1, 110, -95, 170, 140)
 	zones["right"] = _zone(controls, "›", 0, 1, 300, -95, 170, 140)
-	zones["brake"] = _zone(controls, "FREN", 1, 1, -370, -80, 130, 100)
-	zones["nitro"] = _zone(controls, "NİTRO", 1, 1, -125, -320, 150, 110, Color(0.05, 0.35, 0.8, 0.55))
-	var keys := _label("A / D  direksiyon     S  fren-drift     BOŞLUK  nitro     ESC  menü", 18, hud, Color(1, 1, 1, 0.7))
-	_box(keys, 0.5, 1, -60, -22, 900, 30)
+	zones["gas"] = _zone(controls, "GAZ", 1, 1, -110, -105, 170, 170, Color(0.1, 0.5, 0.15, 0.5))
+	zones["brake"] = _zone(controls, "FREN", 1, 1, -300, -90, 130, 110, Color(0.5, 0.1, 0.1, 0.5))
+	zones["handbrake"] = _zone(controls, "EL FRENİ", 1, 1, -300, -230, 130, 90)
+	zones["nitro"] = _zone(controls, "NİTRO", 1, 1, -110, -300, 150, 100, Color(0.05, 0.35, 0.8, 0.55))
+	var keys := _label("W gaz   S fren/geri   A/D direksiyon   BOŞLUK el freni (drift)   SHIFT nitro   R piste dön", 17, hud, Color(1, 1, 1, 0.7))
+	_box(keys, 0.5, 1, -60, -22, 1000, 30)
 	keys.visible = not touch_mode
 
 	# --- Menü
@@ -1205,7 +1102,7 @@ func _update_hud() -> void:
 	lap_label.text = "TUR %d/%d" % [clampi(int(player.s / track.length) + 1, 1, LAPS), LAPS]
 	time_label.text = _fmt_time(race_time)
 	nitro_bar.value = player.nitro
-	speedo.speed_kmh = maxf(player.vf, 0.0) * 3.6
+	speedo.speed_kmh = absf(player.body.speed) * 3.6
 	speedo.nitro = player.nitro
 	speedo.boosting = player.boost
 	for c in cars:
@@ -1224,9 +1121,11 @@ func _paint_step(d: int) -> void:
 	paint_index = wrapi(paint_index + d, 0, GARAGE.size())
 	var old: Dictionary = player
 	var g: Dictionary = GARAGE[paint_index]
-	player = _make_car(g.model, g.color, true, old.s, old.x, {"top": old.top, "acc": old.acc})
+	player = _make_car(g.model, g.color, true, old.s, old.x)
+	player.body.freeze = true
 	cars[cars.find(old)] = player
-	old.root.queue_free()
+	old.body.queue_free()
+	old.sparks.queue_free()
 	_refresh_menu()
 
 

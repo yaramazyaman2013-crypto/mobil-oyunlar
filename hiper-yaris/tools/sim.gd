@@ -18,9 +18,13 @@ func _process(delta: float) -> void:
 		var r: Dictionary = g._ranks()
 		var line := "t=%.0f " % g.race_time
 		for c in g.cars:
-			line += "%s(r%d %dkm/h x%.1f%s) " % [c.name, r[c.id], int(c.vf * 3.6), c.x, " KAZA" if c.wreck > 0.0 else ""]
+			line += "%s(r%d %dkm/h x%.1f y%.1f g%d) " % [c.name, r[c.id], int(c.vf * 3.6), c.x, c.body.global_position.y, c.body.on_ground]
 		print(line)
+		var p: Dictionary = g.player
+		var b = p.body
+		print("   oyuncu vt=", snappedf(p.get("vt", 0.0), 0.1), " v=", snappedf(b.speed, 0.1), " gaz=", b.throttle, " fren=", b.brake, " zemin=", b.on_ground, " kayma=", snappedf(b.slip, 0.01), " top=", p.top, " eğim=", snappedf(b.global_basis.z.y, 0.02), " kütle=", b.mass)
 	if g.over.visible:
+		print("DUVAR_SÜRESİ ", g.cars.map(func(c): return "%s=%.1f" % [c.name, c.get("wall", 0.0)]))
 		print("BİTTİ süre=", snappedf(g.race_time, 0.1), " sıra=", g.finish_order.map(func(c): return c.name), " uzunluk=", int(g.track.length))
 		get_tree().quit()
-	if t > 300: print("zaman aşımı"); get_tree().quit()
+	if t > 400: print("zaman aşımı"); get_tree().quit()

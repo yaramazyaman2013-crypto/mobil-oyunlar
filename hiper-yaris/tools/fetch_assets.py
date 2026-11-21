@@ -47,7 +47,7 @@ for t, maps in TEXTURES.items():
 
 get(files(HDRI)["hdri"]["1k"]["hdr"]["url"], os.path.join(ROOT, "sky", HDRI + ".hdr"))
 # Sketchfab araçları (API anahtarı gerekir; ortamın proxy'si ekler):
-#   V12 Goblin 0a20e49ad5774d778567cb5c3f345786, Rayback Mohawk 2c5ea0d5f73246549c0b9b68f53627e9,
+#   V12 Goblin 0a20e49ad5774d778567cb5c3f345786,
 #   Generic Sport Car 7ad3bfb2bd7449c19698fc7d0592a601  ->  /v3/models/<uid>/download (glb)
 get("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/CarConcept/glTF-Binary/CarConcept.glb",
     os.path.join(ROOT, "cars", "CarConcept.glb"))

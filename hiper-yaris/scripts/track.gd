@@ -13,6 +13,7 @@ var tan := PackedVector3Array()
 var right := PackedVector3Array()
 var curv := PackedFloat32Array()   # işaretli eğrilik (1/m), + = sağa dönüş
 var length := 0.0
+var jumps: Array = []               # tepe noktalarının indeksleri
 var _grid := {}                    # yol noktaları için uzaysal hash (çakışma kontrolü)
 # Arazi yükseklik ızgarası
 var _h := PackedFloat32Array()
@@ -38,6 +39,7 @@ func build(points: Array, seed_value: int) -> void:
 	seed(seed_value)
 	_sample_spline(points)
 	_build_road()
+	_build_walls()
 	_build_rails()
 	_build_ground()
 	_build_terrain()
@@ -87,18 +89,55 @@ func _sample_spline(points: Array) -> void:
 	var raw := PackedFloat32Array()
 	raw.resize(count)
 	for i in count:
-		var a := tan[i]
-		var b := tan[(i + 1) % count]
+		var a := Vector3(tan[i].x, 0, tan[i].z).normalized()
+		var b := Vector3(tan[(i + 1) % count].x, 0, tan[(i + 1) % count].z).normalized()
 		raw[i] = -a.signed_angle_to(b, Vector3.UP) / DS
 	for i in count:
 		var s := 0.0
 		for k in range(-4, 5): s += raw[(i + k + count) % count]
 		curv[i] = s / 9.0
+	_apply_elevation()
 	_grid.clear()
 	for i in count:
 		var key := Vector2i(floori(pos[i].x / 20.0), floori(pos[i].z / 20.0))
 		if not _grid.has(key): _grid[key] = []
 		_grid[key].append(i)
+
+
+## Pist boyunca yokuş/iniş profili (kapalı döngüde periyodik) ve düzlüklerde iki küçük tepe.
+func _apply_elevation() -> void:
+	var n := pos.size()
+	var L := length
+	var hs := PackedFloat32Array()
+	hs.resize(n)
+	for i in n:
+		var s := i * DS
+		var h := 10.0 * sin(TAU * 2.0 * s / L + 0.6) + 4.0 * sin(TAU * 5.0 * s / L + 1.9) + 1.5 * sin(TAU * 9.0 * s / L + 0.3)
+		hs[i] = h - 10.0 * sin(0.6) - 4.0 * sin(1.9) - 1.5 * sin(0.3)   # başlangıç çizgisi 0 m
+	# Düzlüklerde zıplatan tepeler
+	jumps.clear()
+	var best: Array = []
+	for i in range(60, n - 60, 10):
+		var straight := true
+		for k in range(-35, 36, 5):
+			if absf(curv[(i + k) % n]) > 0.0015: straight = false
+		if straight: best.append(i)
+	for cand in best:
+		if jumps.size() >= 2: break
+		var far := true
+		for jj in jumps:
+			if absi(cand - jj) < n / 4: far = false
+		if far: jumps.append(cand)
+	for jj in jumps:
+		for k in range(-30, 31):
+			var d := k * DS
+			hs[(jj + k + n) % n] += 1.7 * exp(-(d * d) / (22.0 * 22.0))
+	for i in n:
+		pos[i].y = hs[i]
+	for i in n:
+		var tv := (pos[(i + 1) % n] - pos[(i - 1 + n) % n]).normalized()
+		tan[i] = tv
+		right[i] = Vector3(tv.x, 0, tv.z).cross(Vector3.UP).normalized()
 
 
 func idx(s: float) -> int:
@@ -151,7 +190,6 @@ func _build_road() -> void:
 		var k := i % n
 		for x in cols:
 			st.set_uv(Vector2(x, i * DS))
-			st.set_normal(Vector3.UP)
 			st.add_vertex(pos[k] + right[k] * x + Vector3(0, 0.02, 0))
 	var w := cols.size()
 	for i in n:
@@ -160,9 +198,11 @@ func _build_road() -> void:
 			var b := a + w
 			st.add_index(a); st.add_index(b); st.add_index(a + 1)
 			st.add_index(a + 1); st.add_index(b); st.add_index(b + 1)
+	st.generate_normals()
 	st.generate_tangents()
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()
+	_add_collision(mi.mesh)
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://scripts/road.gdshader")
 	mat.set_shader_parameter("albedo_tex", _tex("res://assets/real/textures/asphalt_02/albedo.jpg"))
@@ -174,6 +214,49 @@ func _build_road() -> void:
 	mi.material_override = mat
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
+
+
+## Gerçek çarpışma yüzeyi (fizik katmanı 1)
+func _add_collision(mesh: Mesh) -> void:
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var pm := PhysicsMaterial.new()
+	pm.friction = 0.6
+	body.physics_material_override = pm
+	var cs := CollisionShape3D.new()
+	cs.shape = mesh.create_trimesh_shape()
+	body.add_child(cs)
+	add_child(body)
+
+
+## Görünmez bariyer duvarları (bariyerlerin hizasında, 1.4 m yüksek)
+func _build_walls() -> void:
+	var faces := PackedVector3Array()
+	var n := pos.size()
+	for side in [-1.0, 1.0]:
+		var x: float = side * (HALF + 0.95)
+		for i in n:
+			var k := (i + 1) % n
+			var a: Vector3 = pos[i] + right[i] * x
+			var b: Vector3 = pos[k] + right[k] * x
+			var lo := Vector3(0, -1.0, 0)
+			var hi := Vector3(0, 3.0, 0)
+			faces.append_array([a + lo, b + lo, b + hi, a + lo, b + hi, a + hi])
+	var shape := ConcavePolygonShape3D.new()
+	shape.backface_collision = true
+	shape.set_faces(faces)
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var pm := PhysicsMaterial.new()
+	pm.friction = 0.15
+	pm.bounce = 0.1
+	body.physics_material_override = pm
+	var cs := CollisionShape3D.new()
+	cs.shape = shape
+	body.add_child(cs)
+	add_child(body)
 
 
 func _build_rails() -> void:
@@ -407,7 +490,11 @@ func _build_terrain() -> void:
 	var dist := PackedFloat32Array()
 	dist.resize(total)
 	dist.fill(1e9)
-	for p in pos:
+	var near := PackedInt32Array()
+	near.resize(total)
+	near.fill(0)
+	for pi in pos.size():
+		var p := pos[pi]
 		var cx := int((p.x - _horigin.x) / HCELL)
 		var cz := int((p.z - _horigin.y) / HCELL)
 		for dz in range(-3, 4):
@@ -419,29 +506,49 @@ func _build_terrain() -> void:
 				var wz := _horigin.y + z * HCELL
 				var d := Vector2(wx - p.x, wz - p.z).length()
 				var k := z * _hw + x
-				if d < dist[k]: dist[k] = d
+				if d < dist[k]:
+					dist[k] = d
+					near[k] = pi
 	var c1 := HCELL
 	var c2 := HCELL * 1.4142
 	for z in _hh:
 		for x in _hw:
 			var k := z * _hw + x
-			var v := dist[k]
-			if x > 0: v = minf(v, dist[k - 1] + c1)
+			if x > 0:
+				if dist[k - 1] + c1 < dist[k]:
+					dist[k] = dist[k - 1] + c1
+					near[k] = near[k - 1]
 			if z > 0:
-				v = minf(v, dist[k - _hw] + c1)
-				if x > 0: v = minf(v, dist[k - _hw - 1] + c2)
-				if x < _hw - 1: v = minf(v, dist[k - _hw + 1] + c2)
-			dist[k] = v
+				if dist[k - _hw] + c1 < dist[k]:
+					dist[k] = dist[k - _hw] + c1
+					near[k] = near[k - _hw]
+				if x > 0:
+					if dist[k - _hw - 1] + c2 < dist[k]:
+						dist[k] = dist[k - _hw - 1] + c2
+						near[k] = near[k - _hw - 1]
+				if x < _hw - 1:
+					if dist[k - _hw + 1] + c2 < dist[k]:
+						dist[k] = dist[k - _hw + 1] + c2
+						near[k] = near[k - _hw + 1]
 	for z in range(_hh - 1, -1, -1):
 		for x in range(_hw - 1, -1, -1):
 			var k := z * _hw + x
-			var v := dist[k]
-			if x < _hw - 1: v = minf(v, dist[k + 1] + c1)
+			if x < _hw - 1:
+				if dist[k + 1] + c1 < dist[k]:
+					dist[k] = dist[k + 1] + c1
+					near[k] = near[k + 1]
 			if z < _hh - 1:
-				v = minf(v, dist[k + _hw] + c1)
-				if x < _hw - 1: v = minf(v, dist[k + _hw + 1] + c2)
-				if x > 0: v = minf(v, dist[k + _hw - 1] + c2)
-			dist[k] = v
+				if dist[k + _hw] + c1 < dist[k]:
+					dist[k] = dist[k + _hw] + c1
+					near[k] = near[k + _hw]
+				if x < _hw - 1:
+					if dist[k + _hw + 1] + c2 < dist[k]:
+						dist[k] = dist[k + _hw + 1] + c2
+						near[k] = near[k + _hw + 1]
+				if x > 0:
+					if dist[k + _hw - 1] + c2 < dist[k]:
+						dist[k] = dist[k + _hw - 1] + c2
+						near[k] = near[k + _hw - 1]
 	# Yükseklik: yolun yanında düz taban, sonra yükselen kanyon duvarı ve plato
 	var big := FastNoiseLite.new()
 	big.seed = randi()
@@ -461,10 +568,11 @@ func _build_terrain() -> void:
 			var de := dist[k] - edge
 			var wall := 18.0 + 42.0 * (big.get_noise_2d(wx, wz) * 0.5 + 0.5)
 			var rise := smoothstep(4.0, 26.0 + wall * 0.4, de)
+			var base: float = pos[near[k]].y
 			var h := wall * rise + det.get_noise_2d(wx, wz) * 7.0 * rise
 			h += maxf(de - 80.0, 0.0) * 0.05 * (big.get_noise_2d(wx * 2.0, wz * 2.0) + 0.6)
-			if de < 4.0: h = -0.06 + det.get_noise_2d(wx, wz) * 0.15 * clampf(de, 0, 4) / 4.0 - 0.1
-			_h[k] = h
+			if de < 4.0: h = -0.16 + det.get_noise_2d(wx, wz) * 0.15 * clampf(de, 0, 4) / 4.0
+			_h[k] = h + base
 	# Mesh
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()

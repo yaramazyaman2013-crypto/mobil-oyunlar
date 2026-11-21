@@ -1,7 +1,6 @@
 extends Node
 ## Test: menüyü ve yarışın farklı noktalarını otomatik oynatıp ekran görüntüsü alır.
 ## godot -- --tool=capture   (çıktı: build/shots/)
-## Yazılımsal renderer yavaş olduğu için araçları pist boyunca ileri "ışınlar".
 var frames := 0
 var step := 0
 var jumps := [300.0, 1100.0, 1900.0]
@@ -16,7 +15,10 @@ func _ready() -> void:
 func shot(name: String) -> void:
 	get_viewport().get_texture().get_image().save_png("res://build/shots/%s.png" % name)
 	var p: Dictionary = g.player
-	print("shot ", name, " s=", int(p.s), " v=", int(p.vf * 3.6), "kmh rank=", g._ranks()[p.id], " x=", snappedf(p.x, 0.1))
+	var b = p.body
+	var spins := []
+	for w in b.wheels: spins.append(snappedf(w.spin, 0.1))
+	print("shot ", name, " s=", int(p.s), " v=", int(b.speed * 3.6), "kmh zemin=", b.on_ground, " tekerlek_dönüş=", spins, " sıkışma=", b.wheels.map(func(w): return snappedf(w.comp, 0.01)))
 
 func _process(_d: float) -> void:
 	frames += 1
@@ -29,20 +31,11 @@ func _process(_d: float) -> void:
 				var jump: float = jumps[ji] - g.player.s
 				for c in g.cars:
 					c.s += jump
-					c.pos = g.track.point(c.s, c.x)
-					var t: Vector3 = g.track.tangent(c.s)
-					c.yaw = atan2(t.x, t.z)
-					c.vel = t * 55.0
 					c.idx = g.track.idx(c.s)
-				g.player.nitro = 1.0 if ji == 1 else 0.4
+					c.body.place(g.track.point(c.s, c.x), g.track.tangent(c.s), 50.0)
+				g.player.nitro = 1.0
 				if ji == 1: g.player.boost = true
-				
 			wait += 1
-			if wait == 25:
+			if wait == 40:
 				shot("03_race_%d" % ji); ji += 1; wait = 0
-		3:
-			pass
-			step += 1
-		4: if g.over.visible and g.over.modulate.a >= 1.0: shot("04_finish"); step += 1
-		5: get_tree().quit()
 	if frames > 3000: print("timeout"); get_tree().quit()
