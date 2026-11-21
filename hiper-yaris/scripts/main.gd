@@ -205,7 +205,9 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 	add_child(root)
 	var body := Node3D.new()          # süspansiyon eğimi bu düğüme uygulanır
 	root.add_child(body)
+	body.position.y = 0.5
 	var model := _load_model(model_id, body)
+	model.position.y -= 0.52   # 2 cm gömülü: tekerlekler yere tam bassın
 	if MODELS[model_id].paint: _paint(model, color)
 	_fix_glass(model)
 	var wheels := _rig_wheels(model, MODELS[model_id].wheels)
@@ -460,8 +462,8 @@ func _place(car: Dictionary, delta: float) -> void:
 	root.position = car.pos
 	root.rotation.y = car.yaw
 	var body: Node3D = car.body
-	var pitch: float = clampf(-car.acc_long * 0.0035, -0.05, 0.05)
-	var roll: float = clampf(car.acc_lat * 0.0016, -0.07, 0.07)
+	var pitch: float = clampf(-car.acc_long * 0.0015, -0.022, 0.022)
+	var roll: float = clampf(car.acc_lat * 0.0008, -0.035, 0.035)
 	if delta > 0.0:
 		body.rotation.x = lerpf(body.rotation.x, pitch, 1.0 - exp(-delta * 6.0))
 		body.rotation.z = lerpf(body.rotation.z, roll, 1.0 - exp(-delta * 6.0))

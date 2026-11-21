@@ -264,8 +264,10 @@ func _build_rocks() -> void:
 				var d: float = HALF + SHOULDER + randf_range(8.0, 16.0)
 				var p: Vector3 = pos[i] + right[i] * side * d
 				if road_distance(p) > HALF + SHOULDER + 6.0:
-					p.y = height_at(p.x, p.z) - 0.5
-					_rock(["face1", "face2", "cliff1", "boulder"].pick_random(), p, randf_range(1.5, 3.0), randf() * TAU)
+					# Yamaçta havada kalmasın: en alçak noktaya göre göm
+					var hmin := minf(minf(height_at(p.x - 3, p.z), height_at(p.x + 3, p.z)), minf(height_at(p.x, p.z - 3), height_at(p.x, p.z + 3)))
+					p.y = hmin - 0.8
+					_rock(["boulder", "boulders"].pick_random(), p, randf_range(2.0, 3.5), randf() * TAU)
 			if randf() < 0.45:
 				var q: Vector3 = pos[i] + right[i] * side * (HALF + SHOULDER + randf_range(1.0, 5.0)) + tan[i] * randf_range(-5, 5)
 				if road_distance(q) > HALF + SHOULDER + 0.5:
