@@ -85,6 +85,7 @@ func _sample_spline(points: Array) -> void:
 		for k in range(-4, 5): s += raw[(i + k + count) % count]
 		curv[i] = s / 9.0
 	_apply_elevation()
+	_build_safe_speed()
 	_grid.clear()
 	for i in count:
 		var key := Vector2i(floori(pos[i].x / 20.0), floori(pos[i].z / 20.0))
@@ -126,6 +127,23 @@ func _apply_elevation() -> void:
 		var tv := (pos[(i + 1) % n] - pos[(i - 1 + n) % n]).normalized()
 		tan[i] = tv
 		right[i] = Vector3(tv.x, 0, tv.z).cross(Vector3.UP).normalized()
+
+
+## Yapay zekâ için güvenli hız tablosu: viraj hızı + 14 m/s² ile frenleme mesafesi (a_lat=1 için)
+var _vsafe := PackedFloat32Array()
+func _build_safe_speed() -> void:
+	var n := pos.size()
+	_vsafe.resize(n)
+	for i in n: _vsafe[i] = 1.0 / sqrt(maxf(absf(curv[i]), 0.0001))   # a_lat=1 için viraj hızı
+	# Geriye doğru iki tur: v(i) <= sqrt(v(i+1)² + 2·a·DS) — a_lat ölçeklemesi safe_speed'de yapılır
+	for pass_i in 2:
+		for j in range(n - 1, -1, -1):
+			var nx := (j + 1) % n
+			_vsafe[j] = minf(_vsafe[j], sqrt(_vsafe[nx] * _vsafe[nx] + 2.0 * (14.0 / 20.0) * DS))
+
+
+func safe_speed(s: float, a_lat: float) -> float:
+	return _vsafe[idx(s)] * sqrt(a_lat)
 
 
 func idx(s: float) -> int:
@@ -585,7 +603,7 @@ func _build_terrain() -> void:
 # Sadeleştirilmiş modeller (tools/optimize_env.py) bölge bölge MultiMesh ile çizilir:
 # her bölge ayrı görünürlük mesafesine sahip, uzaktakiler hiç çizilmez.
 
-const CHUNK := 160.0
+const CHUNK := 320.0
 var env_quality := 1.0          # 0.4 mobil düşük .. 1.0 yüksek: yerleşim yoğunluğu
 var _env := {}                  # çeşit adı -> {mesh, size}
 var _buckets := {}              # "çeşit|bölge" -> {xf: Array[Transform3D], cfg}
@@ -600,6 +618,7 @@ func _env_mesh(file: String, mats: Array) -> ArrayMesh:
 		for si in m.mesh.get_surface_count():
 			var st := SurfaceTool.new()
 			st.create_from(m.mesh, si)
+			if not (m.mesh.surface_get_format(si) & Mesh.ARRAY_FORMAT_NORMAL): st.generate_normals()
 			st.generate_tangents()   # normal haritası doğru ışıklansın
 			st.commit(mesh)
 			mesh.surface_set_material(mesh.get_surface_count() - 1, mats[mini(midx, mats.size() - 1)])
@@ -666,9 +685,10 @@ func _build_env() -> void:
 	_load_env()
 	var n := pos.size()
 	var boulders := _variants("namaqualand_boulder_02")
-	var stones := _variants("namaqualand_boulders_01") + _variants("namaqualand_rocks_01")
-	var plants := _variants("cheiridopsis_succulent") + _variants("othonna_cerarioides")
-	var dry := _variants("dry_branches_medium_01") + _variants("dead_quiver_branch_01")
+	var stones := (_variants("namaqualand_boulders_01") + _variants("namaqualand_rocks_01")).slice(0, 3)
+	var plants := (_variants("cheiridopsis_succulent").slice(0, 3) + _variants("othonna_cerarioides").slice(0, 2))
+	var dry := _variants("dry_branches_medium_01").slice(0, 2)
+	var r_far := lerpf(0.45, 1.0, env_quality)   # telefonda dekor daha yakına kadar çizilir
 	var step := int(lerpf(14.0, 5.0, env_quality))
 	for i in range(0, n, step):
 		for side in [-1.0, 1.0]:
@@ -678,13 +698,13 @@ func _build_env() -> void:
 				var p: Vector3 = pos[i] + right[i] * side * d
 				if road_distance(p) > HALF + SHOULDER + 5.0:
 					p.y = minf(minf(height_at(p.x - 3, p.z), height_at(p.x + 3, p.z)), minf(height_at(p.x, p.z - 3), height_at(p.x, p.z + 3))) - 0.6
-					_put(boulders.pick_random(), p, randf_range(1.3, 2.8), randf() * TAU, 380.0, true)
+					_put(boulders.pick_random(), p, randf_range(1.3, 2.8), randf() * TAU, 380.0 * r_far, env_quality > 0.5)
 			# Yol kenarı taşları
 			if randf() < 0.5:
 				var q: Vector3 = pos[i] + right[i] * side * (HALF + SHOULDER + randf_range(1.0, 7.0)) + tan[i] * randf_range(-5, 5)
 				if road_distance(q) > HALF + SHOULDER + 0.5:
 					q.y = height_at(q.x, q.z) - 0.05
-					_put(stones.pick_random(), q, randf_range(2.5, 7.0), randf() * TAU, 160.0, false)
+					_put(stones.pick_random(), q, randf_range(2.5, 7.0), randf() * TAU, 160.0 * r_far, false)
 			# Çalılar ve kuru dallar
 			for k in 2:
 				if randf() < 0.75:
@@ -693,5 +713,5 @@ func _build_env() -> void:
 						r.y = height_at(r.x, r.z) - 0.03
 						var is_dry := randf() < 0.3
 						var key: String = (dry if is_dry else plants).pick_random()
-						_put(key, r, randf_range(1.6, 3.2), randf() * TAU, 130.0, false)
+						_put(key, r, randf_range(1.6, 3.2), randf() * TAU, 130.0 * r_far, false)
 	_flush_env()

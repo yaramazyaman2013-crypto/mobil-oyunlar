@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bqqxvp721hnts"
-path="res://.godot/imported/exterminator_1.jpg-fc2c74e95eddc37a1aa9d24f28c92761.ctex"
+path.s3tc="res://.godot/imported/exterminator_1.jpg-fc2c74e95eddc37a1aa9d24f28c92761.s3tc.ctex"
+path.etc2="res://.godot/imported/exterminator_1.jpg-fc2c74e95eddc37a1aa9d24f28c92761.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "be3f3a6bd1a162a2e1d1763d5c5b7c46"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/real/cars/exterminator_1.jpg"
-dest_files=["res://.godot/imported/exterminator_1.jpg-fc2c74e95eddc37a1aa9d24f28c92761.ctex"]
+dest_files=["res://.godot/imported/exterminator_1.jpg-fc2c74e95eddc37a1aa9d24f28c92761.s3tc.ctex", "res://.godot/imported/exterminator_1.jpg-fc2c74e95eddc37a1aa9d24f28c92761.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
@@ -33,5 +35,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
-detect_3d/compress_to=1
+process/size_limit=2048
+detect_3d/compress_to=0

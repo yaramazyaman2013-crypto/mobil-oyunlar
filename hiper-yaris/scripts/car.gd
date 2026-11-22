@@ -37,6 +37,7 @@ var on_ground := 0
 var steer_angle := 0.0
 var slip := 0.0          # 0..1 kayma miktarı (duman/ses için)
 var air_time := 0.0
+var wrecked := false     # kaza modu: sürüş yardımları kapalı, araç serbestçe savrulur
 
 
 func setup(wheel_specs: Array, mass_kg: float) -> void:
@@ -56,6 +57,8 @@ func setup(wheel_specs: Array, mass_kg: float) -> void:
 	pm.friction = 0.25
 	pm.bounce = 0.15
 	physics_material_override = pm
+	contact_monitor = true
+	max_contacts_reported = 4
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(1.9, 0.75, 4.3)
@@ -150,8 +153,8 @@ func _physics_process(delta: float) -> void:
 		_update_wheel_visual(w, dist)
 
 	# Arcade: çarpışmalarda araçlar havaya fırlamasın
-	if linear_velocity.y > 5.0:
-		linear_velocity.y = 5.0
+	if linear_velocity.y > (9.0 if wrecked else 5.0):
+		linear_velocity.y = 9.0 if wrecked else 5.0
 	# Aerodinamik
 	apply_central_force(-v * v.length() * drag)
 	if on_ground > 0:
@@ -159,13 +162,15 @@ func _physics_process(delta: float) -> void:
 
 	# Kararlılık yardımı: el freni yokken fazla savrulmayı sönümle (arka dağıtmasın)
 	var yaw_rate := angular_velocity.dot(up)
-	if on_ground >= 2 and not handbrake:
+	if on_ground >= 2 and not handbrake and not wrecked:
 		var want := -steer_angle * spd / 2.7          # bisiklet modeli hedef dönüş hızı
 		var lim := 16.0 / maxf(spd, 4.0)              # lastiklerin taşıyabileceği en fazla dönüş
 		want = clampf(want, -lim, lim)
 		apply_torque(up * (want - yaw_rate) * mass * 2.5)
 	# Drift yardımı (arcade): el freninde kayma açısı ~28°'de tutulur, hız aracın baktığı yöne aktarılır
-	if handbrake and on_ground >= 2 and spd > 8.0:
+	if wrecked:
+		pass
+	elif handbrake and on_ground >= 2 and spd > 8.0:
 		var beta := atan2(lat_speed, absf(speed))
 		var excess := absf(beta) - 0.42
 		if excess > 0.0:
@@ -182,12 +187,12 @@ func _physics_process(delta: float) -> void:
 			linear_velocity += fwd * signf(speed) * lat_v2.length() * clampf(delta * 1.8, 0.0, 1.0)
 			apply_torque(up * -yaw_rate * mass * 2.0)
 	# Devrilme önleyici: yerdeyken yan yatma 20°'yi geçerse doğrult
-	if on_ground >= 1:
+	if on_ground >= 1 and not wrecked:
 		var tilt := up.cross(Vector3.UP)
 		if tilt.length() > 0.34:
 			apply_torque(tilt * mass * 18.0 - angular_velocity.project(fwd) * mass * 1.5)
 	# Havadayken düz kal
-	if on_ground == 0:
+	if on_ground == 0 and not wrecked:
 		air_time += delta
 		var axis := up.cross(Vector3.UP)
 		apply_torque(axis * mass * 6.0 - angular_velocity * mass * 0.8)

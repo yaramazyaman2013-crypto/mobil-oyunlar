@@ -3,7 +3,7 @@ extends Node
 ## godot -- --tool=capture   (çıktı: build/shots/)
 var frames := 0
 var step := 0
-var jumps := [300.0, 1100.0, 1900.0]
+var jumps := [300.0, 1100.0]
 var ji := 0
 var wait := 0
 @onready var g := get_parent()
@@ -18,6 +18,8 @@ func shot(name: String) -> void:
 	var b = p.body
 	var spins := []
 	for w in b.wheels: spins.append(snappedf(w.spin, 0.1))
+	var rs := RenderingServer
+	print("ÇİZİM ", name, " draw_calls=", rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME), " nesne=", rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME), " üçgen=", rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME), " video_bellek_MB=", rs.get_rendering_info(rs.RENDERING_INFO_VIDEO_MEM_USED) / 1048576)
 	print("shot ", name, " s=", int(p.s), " v=", int(b.speed * 3.6), "kmh zemin=", b.on_ground, " tekerlek_dönüş=", spins, " sıkışma=", b.wheels.map(func(w): return snappedf(w.comp, 0.01)))
 
 func _process(_d: float) -> void:

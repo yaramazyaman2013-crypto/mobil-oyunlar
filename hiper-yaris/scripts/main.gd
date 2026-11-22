@@ -59,6 +59,7 @@ const RIVALS := [
 	{"name": "YILDIRIM", "model": "furia_c", "color": Color.WHITE},
 ]
 const CAR_COUNT := 10
+const CRASH_DV := 16.0   # bir fizik adımında bu kadar m/s hız değişimi = kaza
 const PRIZES := [400, 280, 200, 150, 110, 80, 60, 40, 30, 20]
 const UPGRADE_COST := [200, 400, 700, 1100, 1600]
 
@@ -66,6 +67,9 @@ var state := State.MENU
 var track: Track
 var model_scenes := {}
 var car_seq := 0
+var merged_cache := {}
+var tick := 0
+var hud_ranks := {}
 var quality := 2
 var world_env: Environment
 var sun: DirectionalLight3D
@@ -101,7 +105,6 @@ var prog_label: Label
 var pos_label: Label
 var time_label: Label
 var lap_label: Label
-var nitro_bar: ProgressBar
 var speedo: Control
 var big_label: Label
 var popup_label: Label
@@ -116,6 +119,17 @@ var over_place: Label
 var over_info: Label
 var next_button: Button
 var controls: Control
+var progress_bar: ProgressBar
+var minimap: Control
+var nitro_fill: ColorRect
+var keys_label: Label
+var stat_bars: Array = []
+var price_label: Label
+var pause_menu: Control
+var results_box: VBoxContainer
+var loading: ColorRect
+const ACCENT := Color(1.0, 0.55, 0.12)
+const ACCENT_2 := Color(1.0, 0.82, 0.25)
 
 
 func _ready() -> void:
@@ -123,6 +137,7 @@ func _ready() -> void:
 	_load_save()
 	paint_index = int(save.paint)
 	quality = int(save.quality) if int(save.quality) >= 0 else (0 if OS.has_feature("mobile") else 2)
+	if OS.get_environment("QUALITY") != "": quality = int(OS.get_environment("QUALITY"))
 	touch_mode = DisplayServer.is_touchscreen_available()
 	for k in MODELS: model_scenes[k] = load(MODELS[k].path)
 	for s in ["coin", "click", "nitro", "beep", "go"]:
@@ -133,11 +148,19 @@ func _ready() -> void:
 	_build_world()
 	_build_ui()
 	_go_menu()
+	minimap.game = self
+	_setup_minimap.call_deferred()
+	if OS.get_cmdline_user_args().is_empty(): _warmup()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--tool="):
 			var tool: Node = load("res://tools/%s.gd" % arg.substr(7)).new()
 			tool.name = arg.substr(7)
 			add_child(tool)
+
+
+func _setup_minimap() -> void:
+	await get_tree().process_frame
+	minimap.setup(track)
 
 
 func _add_sfx(id: String, stream: AudioStream) -> void:
@@ -218,7 +241,7 @@ func _build_world() -> void:
 func _build_track() -> void:
 	if track: track.queue_free()
 	track = Track.new()
-	track.env_quality = [0.35, 0.65, 1.0][quality]
+	track.env_quality = [0.25, 0.6, 1.0][quality]
 	add_child(track)
 	track.build(TRACK_POINTS, 1234)
 	randomize()
@@ -228,21 +251,23 @@ func _build_track() -> void:
 func _apply_quality() -> void:
 	var q := quality
 	var vp := get_viewport()
-	vp.scaling_3d_scale = [0.7, 0.85, 1.0][q]
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	vp.scaling_3d_scale = [0.6, 0.8, 1.0][q]
 	vp.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_DISABLED, Viewport.MSAA_2X][q]
-	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if q >= 1 else Viewport.SCREEN_SPACE_AA_DISABLED
 	world_env.ssao_enabled = q == 2
 	world_env.glow_enabled = q >= 1
 	world_env.fog_enabled = true
-	world_env.sky.radiance_size = [Sky.RADIANCE_SIZE_64, Sky.RADIANCE_SIZE_128, Sky.RADIANCE_SIZE_256][q]
+	world_env.sky.radiance_size = [Sky.RADIANCE_SIZE_32, Sky.RADIANCE_SIZE_128, Sky.RADIANCE_SIZE_256][q]
+	world_env.sky.process_mode = Sky.PROCESS_MODE_QUALITY if q == 2 else Sky.PROCESS_MODE_INCREMENTAL
 	sun.shadow_enabled = true
-	sun.directional_shadow_mode = [DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS][q]
-	sun.directional_shadow_max_distance = [60.0, 120.0, 220.0][q]
-	RenderingServer.directional_shadow_atlas_set_size([2048, 2048, 4096][q], true)
+	sun.directional_shadow_mode = [DirectionalLight3D.SHADOW_ORTHOGONAL, DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS][q]
+	sun.directional_shadow_max_distance = [45.0, 110.0, 220.0][q]
+	RenderingServer.directional_shadow_atlas_set_size([1024, 2048, 4096][q], true)
 	RenderingServer.directional_soft_shadow_filter_set_quality([RenderingServer.SHADOW_QUALITY_HARD, RenderingServer.SHADOW_QUALITY_SOFT_LOW, RenderingServer.SHADOW_QUALITY_SOFT_HIGH][q])
 	Engine.physics_ticks_per_second = [60, 90, 120][q]
-	Engine.max_physics_steps_per_frame = 8
-	camera.far = [700.0, 1000.0, 1500.0][q] if camera else 1500.0
+	Engine.max_physics_steps_per_frame = 6
+	if camera: camera.far = [600.0, 1000.0, 1500.0][q]
 
 
 func _cycle_quality() -> void:
@@ -252,6 +277,7 @@ func _cycle_quality() -> void:
 	_build_track()
 	_apply_quality()
 	_go_menu()
+	_setup_minimap()
 
 
 # ---------------------------------------------------------------- araçlar
@@ -262,8 +288,18 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 	var model := _load_model(model_id, body)
 	if MODELS[model_id].paint: _paint(model, color)
 	_fix_glass(model)
+	_merge_body(model, MODELS[model_id].wheels, model_id + str(color))
 	var wheels := _rig_wheels(body, model, MODELS[model_id].wheels)
 	body.setup(wheels, 1250.0)
+	for w in wheels:
+		if w.pivot:
+			for wm in (w.pivot as Node).find_children("*", "MeshInstance3D", true, false):
+				(wm as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if not is_player:
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			var gm := mi as MeshInstance3D
+			gm.visibility_range_end = [220.0, 400.0, 0.0][quality]
+			if quality == 0: gm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var tune: Dictionary = info.get("tune", {})
 	for k in tune: body.set(k, tune[k])
 	var flames: Array = []
@@ -277,6 +313,8 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 	body.add_child(smoke)
 	var sparks := _make_sparks()
 	add_child(sparks)
+	var debris := _make_debris(color)
+	add_child(debris)
 	var tag: Label3D = null
 	if not is_player:
 		tag = Label3D.new()
@@ -293,11 +331,11 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 	car_seq += 1
 	var car := {
 		"id": car_seq, "body": body, "root": body, "model": model, "model_id": model_id,
-		"flames": flames, "smoke": smoke, "sparks": sparks, "tag": tag, "name": info.get("name", "SEN"), "player": is_player,
+		"flames": flames, "smoke": smoke, "sparks": sparks, "debris": debris, "tag": tag, "name": info.get("name", "SEN"), "player": is_player,
 		"s": start_s, "x": lane, "idx": track.idx(start_s), "vf": 0.0,
 		"skill": info.get("skill", 1.0), "top": info.get("top", 80.0),
 		"nitro": 0.0, "boost": false, "finished": false,
-		"bump_cd": 0.0, "ai_nitro_cd": randf_range(4, 9), "line": lane, "stuck": 0.0, "wrong": 0.0, "flip": 0.0,
+		"bump_cd": 0.0, "wreck": 0.0, "prev_vel": Vector3.ZERO, "scrape_cd": 0.0, "ai_nitro_cd": randf_range(4, 9), "line": lane, "stuck": 0.0, "wrong": 0.0, "flip": 0.0,
 	}
 	var p := track.point(start_s, lane)
 	body.place(p, track.tangent(start_s), 0.0)
@@ -323,6 +361,14 @@ func _load_model(model_id: String, parent: Node3D) -> Node3D:
 				if k == m or k.is_ancestor_of(m): ok = true
 			if not ok: m.visible = false
 	for m in inst.find_children("*shadow*", "MeshInstance3D", true, false): m.visible = false
+	# Optimizasyon: dışarıdan görünmeyen iç parçaları gizle (her biri ayrı çizim çağrısı)
+	var hidden_words := ["interior", "pedal", "seat", "steering", "dash", "engine", "floormat", "badge", "caliper", "suspension", "_inner", "axle", "radiator"]
+	for m in inst.find_children("*", "MeshInstance3D", true, false):
+		var full := String(m.name).to_lower() + " " + String(m.get_parent().name).to_lower()
+		for w in hidden_words:
+			if full.contains(w):
+				m.visible = false
+				break
 	var aabb := AABB()
 	var first := true
 	for m in inst.find_children("*", "MeshInstance3D", true, false):
@@ -330,6 +376,11 @@ func _load_model(model_id: String, parent: Node3D) -> Node3D:
 		var b: AABB = holder.global_transform.affine_inverse() * m.global_transform * m.get_aabb()
 		aabb = b if first else aabb.merge(b)
 		first = false
+	# Sadece büyük gövde parçaları gölge atsın
+	for m in inst.find_children("*", "MeshInstance3D", true, false):
+		var mm := m as MeshInstance3D
+		var sz: float = (holder.global_transform.affine_inverse() * mm.global_transform * mm.get_aabb()).size.length()
+		mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if sz > aabb.size.length() * 0.6 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var rot: Basis = Basis(Vector3.UP, spec.yaw)
 	var r_aabb: AABB = _rot_aabb(aabb, rot)
 	var sc: float = 4.5 / maxf(r_aabb.size.z, 0.001)
@@ -377,11 +428,52 @@ func _fix_glass(model: Node3D) -> void:
 				if n.contains(w): skip = true
 			if n.contains("glass") and not skip:
 				var g := StandardMaterial3D.new()
-				g.albedo_color = Color(0.03, 0.04, 0.05, 0.75)
+				g.albedo_color = Color(0.02, 0.025, 0.035, 0.93)
 				g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 				g.metallic = 0.9
 				g.roughness = 0.04
 				m3.set_surface_override_material(i, g)
+
+
+## Optimizasyon: tekerlek dışındaki tüm parçaları malzemeye göre tek mesh'te birleştir
+## (40-60 çizim çağrısı -> malzeme sayısı kadar) ve uzak mesafe için LOD üret. Sonuç önbelleğe alınır.
+func _merge_body(model: Node3D, pattern: String, cache_key: String) -> void:
+	var inv := model.global_transform.affine_inverse()
+	var parts: Array = []
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if not m.is_visible_in_tree(): continue
+		var in_wheel := false
+		var n: Node = m
+		while n != null and n != model:
+			if pattern != "" and String(n.name).match(pattern): in_wheel = true
+			n = n.get_parent()
+		if not in_wheel: parts.append(m)
+	if parts.is_empty(): return
+	var mesh: ArrayMesh = merged_cache.get(cache_key)
+	if mesh == null:
+		var groups := {}
+		for m in parts:
+			var xf: Transform3D = inv * m.global_transform
+			for si in m.mesh.get_surface_count():
+				var mat: Material = m.get_active_material(si)
+				if not groups.has(mat):
+					var st := SurfaceTool.new()
+					st.begin(Mesh.PRIMITIVE_TRIANGLES)
+					groups[mat] = st
+				groups[mat].append_from(m.mesh, si, xf)
+		mesh = ArrayMesh.new()
+		for mat in groups:
+			var st: SurfaceTool = groups[mat]
+			st.commit(mesh)
+			if mesh.get_surface_count() > 0:
+				mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
+		merged_cache[cache_key] = mesh
+	var merged := MeshInstance3D.new()
+	merged.mesh = mesh
+	merged.name = "MergedBody"
+	model.add_child(merged)
+	for m in parts: m.queue_free()
 
 
 ## Tekerlek görsellerini bulur, merkezlerinde pivot oluşturur ve fizik bağlantı noktalarını hesaplar.
@@ -504,6 +596,40 @@ func _make_smoke() -> CPUParticles3D:
 	return p
 
 
+## Kaza enkazı: savrulan kaporta/cam parçaları
+func _make_debris(color: Color) -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.emitting = false
+	p.one_shot = true
+	p.explosiveness = 0.95
+	p.amount = 26
+	p.lifetime = 1.8
+	p.local_coords = false
+	p.direction = Vector3(0, 1, 0)
+	p.spread = 75.0
+	p.initial_velocity_min = 5.0
+	p.initial_velocity_max = 15.0
+	p.gravity = Vector3(0, -16, 0)
+	p.angular_velocity_min = -720.0
+	p.angular_velocity_max = 720.0
+	p.scale_amount_min = 0.4
+	p.scale_amount_max = 1.3
+	var q := BoxMesh.new()
+	q.size = Vector3(0.3, 0.05, 0.4)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color if color != Color.WHITE else Color(0.25, 0.25, 0.27)
+	m.metallic = 0.6
+	m.roughness = 0.4
+	m.vertex_color_use_as_albedo = true
+	q.material = m
+	p.mesh = q
+	var g := Gradient.new()
+	g.set_color(0, Color(1, 1, 1))
+	g.set_color(1, Color(0.5, 0.5, 0.5))
+	p.color_ramp = g
+	return p
+
+
 func _make_sparks() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.emitting = false
@@ -549,6 +675,39 @@ func _drive(car: Dictionary, delta: float) -> void:
 	var body: Car = car.body
 	_track_sync(car)
 	var test_mode: bool = get_node_or_null("accel") != null or get_node_or_null("handling") != null
+	# Darbe algılama: bir fizik adımındaki ani hız değişimi = çarpışma şiddeti (duvar ya da araç)
+	var dv: float = (car.prev_vel - body.linear_velocity).length()
+	car.prev_vel = body.linear_velocity
+	car.scrape_cd -= delta
+	if car.wreck > 0.0:
+		# Kaza modu: kontrol yok, araç savruluyor
+		car.wreck -= delta
+		body.throttle = 0.0
+		body.brake = 0.3
+		body.steer = 0.0
+		body.handbrake = false
+		car.boost = false
+		body.nitro_on = false
+		for f in car.flames: f.emitting = false
+		car.smoke.emitting = true
+		if car.wreck <= 0.0: _recover(car)
+		return
+	car.immune = car.get("immune", 0.0) - delta
+	if state == State.RACE and not test_mode and dv > CRASH_DV and absf(body.speed) + dv > 25.0 and car.immune <= 0.0:
+		_crash(car, dv)
+		return
+	if car.player and state == State.RACE and dv > 5.0 and car.bump_cd <= 0.0:
+		car.bump_cd = 0.3
+		cam_shake = maxf(cam_shake, clampf(dv * 0.05, 0.15, 0.6))
+		sfx.impact.volume_db = linear_to_db(clampf(dv / 14.0, 0.25, 1.0))
+		sfx.impact.play()
+		Input.vibrate_handheld(int(clampf(dv * 12.0, 30, 180)))
+	# Duvara sürtünme: sürekli kıvılcım
+	if body.get_contact_count() > 0 and absf(car.x) > Track.HALF - 1.6 and absf(body.speed) > 12.0 and car.scrape_cd <= 0.0:
+		car.scrape_cd = 0.09
+		var sp: CPUParticles3D = car.sparks
+		sp.global_position = body.global_position + track.right[car.idx] * signf(car.x) * 1.0 + Vector3.UP * 0.4
+		sp.restart()
 	if car.player and test_mode: pass
 	elif car.player and not car.finished: _player_input(car, delta)
 	else: _ai_input(car, delta)
@@ -594,12 +753,47 @@ func _contacts(delta: float) -> void:
 		sp.restart()
 		Input.vibrate_handheld(int(clampf(rel * 10.0, 40, 200)))
 		# Takedown: hızlı ve sert vuruş rakibi savurur
-		if rel > 9.0 and not c.finished:
+		if rel > 9.0 and not c.finished and c.wreck <= 0.0 and player.wreck <= 0.0:
 			var push := Vector3(d.x, 0.0, d.z).normalized()
-			b.apply_central_impulse(push * b.mass * 2.5)
-			b.apply_torque_impulse(Vector3.UP * b.mass * 4.0 * (1.0 if randf() < 0.5 else -1.0))
-			player.nitro = minf(player.nitro + 0.35, 1.0)
+			b.apply_central_impulse(push * b.mass * 3.0)
+			_crash(c, rel + 10.0)
+			player.nitro = minf(player.nitro + 0.4, 1.0)
 			_popup("TAKEDOWN!  +NİTRO", Color(1.0, 0.4, 0.25))
+			_slowmo(0.4, 0.6)
+
+
+## Kaza: sürüş yardımları kapanır, araç takla atar, enkaz ve duman saçılır; ~2 sn sonra piste döner.
+func _crash(car: Dictionary, strength: float) -> void:
+	if car.wreck > 0.0 or car.finished: return
+	if debug_log: print("  KAZA ", car.name, " şiddet=", snappedf(strength, 0.1), " s=", int(fposmod(car.s, track.length)))
+	var body: Car = car.body
+	car.wreck = 2.2
+	body.wrecked = true
+	var spin := Vector3(randf_range(-1, 1), randf_range(-0.5, 0.5), randf_range(-1, 1)).normalized()
+	body.apply_torque_impulse(spin * body.mass * clampf(strength * 0.35, 3.0, 9.0))
+	body.apply_central_impulse(Vector3.UP * body.mass * clampf(strength * 0.18, 1.5, 4.5))
+	var db: CPUParticles3D = car.debris
+	db.global_position = body.global_position + Vector3.UP * 0.6
+	db.restart()
+	var sp: CPUParticles3D = car.sparks
+	sp.global_position = body.global_position + Vector3.UP * 0.5
+	sp.restart()
+	var d2: float = player.body.global_position.distance_to(body.global_position)
+	if car.player or d2 < 40.0:
+		sfx.impact.volume_db = 0.0 if car.player else linear_to_db(clampf(1.0 - d2 / 45.0, 0.2, 1.0))
+		sfx.impact.play()
+	if car.player:
+		cam_shake = 1.0
+		_popup("KAZA!", Color(1.0, 0.3, 0.25))
+		Input.vibrate_handheld(350)
+		_slowmo(0.3, 1.1)
+
+
+## Ağır çekim (gerçek zamanlı süre)
+func _slowmo(scale: float, seconds: float) -> void:
+	Engine.time_scale = scale
+	await get_tree().create_timer(seconds, true, false, true).timeout
+	Engine.time_scale = 1.0
 
 
 func _recover(car: Dictionary) -> void:
@@ -610,6 +804,10 @@ func _recover(car: Dictionary) -> void:
 	car.flip = 0.0
 	car.stuck = 0.0
 	car.wrong = 0.0
+	car.wreck = 0.0
+	car.immune = 1.5   # piste döndükten hemen sonra tekrar kaza sayılmasın
+	car.body.wrecked = false
+	car.prev_vel = car.body.linear_velocity
 	if car.player:
 		_popup("PİSTE DÖNDÜN", Color(0.8, 0.9, 1.0))
 
@@ -660,14 +858,8 @@ func _ai_input(car: Dictionary, delta: float) -> void:
 	var ang: float = atan2(-local.x, local.z)        # + sağa
 	var max_a: float = lerpf(body.max_steer, 0.11, clampf(absf(body.speed) / 70.0, 0.0, 1.0))
 	body.steer = clampf(ang * 2.2 / maxf(max_a, 0.05) * 0.35, -1.0, 1.0)
-	# Hedef hız: önümüzdeki virajlar için fren mesafesi
-	var vt: float = car.top
-	var d := 0.0
-	while d < 180.0:
-		var kk: float = absf(track.curvature(car.s + d))
-		var vc: float = sqrt(A_LAT_AI * car.skill / maxf(kk, 0.0001))
-		vt = minf(vt, sqrt(vc * vc + 2.0 * 14.0 * d))
-		d += 8.0
+	# Hedef hız: önceden hesaplanmış viraj/fren tablosundan (her adımda döngü yok)
+	var vt: float = minf(car.top, track.safe_speed(car.s, A_LAT_AI * car.skill))
 	vt = minf(vt, follow)
 	if not car.player:
 		var gap: float = car.s - player.s
@@ -692,6 +884,7 @@ func _setup_grid() -> void:
 	for c in cars:
 		c.body.queue_free()
 		c.sparks.queue_free()
+		c.debris.queue_free()
 	cars.clear()
 	finish_order.clear()
 	var level := int(save.level)
@@ -704,7 +897,8 @@ func _setup_grid() -> void:
 		var s := -12.0 - row * 10.0 - (5.0 if i % 2 else 0.0)
 		if i == CAR_COUNT - 1:
 			var g: Dictionary = GARAGE[paint_index]
-			player = _make_car(g.model, g.color, true, s, lane, {"tune": {"power_kw": 300.0 + 22.0 * int(save.motor)}})
+			var cs := _car_stats(paint_index)
+			player = _make_car(g.model, g.color, true, s, lane, {"tune": {"power_kw": cs.power + 22.0 * int(save.motor), "grip_front": 1.25 * cs.grip, "grip_rear": 1.35 * cs.grip}})
 			cars.append(player)
 		else:
 			var r: Dictionary = rivals[i]
@@ -717,6 +911,9 @@ func _setup_grid() -> void:
 
 
 func _go_menu() -> void:
+	Engine.time_scale = 1.0
+	get_tree().paused = false
+	pause_menu.visible = false
 	state = State.MENU
 	_setup_grid()
 	engine.stop()
@@ -730,6 +927,9 @@ func _go_menu() -> void:
 
 func _start_race() -> void:
 	if not save.paints.has(paint_index): return
+	Engine.time_scale = 1.0
+	get_tree().paused = false
+	pause_menu.visible = false
 	save.paint = paint_index
 	_write_save()
 	_setup_grid()
@@ -749,41 +949,22 @@ func _start_race() -> void:
 	_pop(big_label)
 
 
-func _finish_player() -> void:
-	state = State.FINISHED
-	var place: int = finish_order.find(player) + 1
-	var prize: int = PRIZES[place - 1]
-	save.coins = int(save.coins) + prize
-	if place <= 3: save.level = int(save.level) + 1
-	_write_save()
-	over_place.text = "%d." % place
-	var cols := [Color(1, 0.82, 0.2), Color(0.85, 0.88, 0.95), Color(0.9, 0.6, 0.35)]
-	over_place.add_theme_color_override("font_color", cols[place - 1] if place <= 3 else Color(0.8, 0.8, 0.8))
-	var titles := ["ZAFER!", "İKİNCİ", "ÜÇÜNCÜ"]
-	over_info.text = "%s\nSÜRE  %s\n+%d COIN" % [titles[place - 1] if place <= 3 else "%d. SIRA" % place, _fmt_time(race_time), prize]
-	next_button.text = "SONRAKİ YARIŞ" if place <= 3 else "TEKRAR DENE"
-	controls.visible = false
-	hud.visible = false
-	await get_tree().create_timer(1.5).timeout
-	if state != State.FINISHED: return
-	over.visible = true
-	over.modulate.a = 0.0
-	create_tween().tween_property(over, "modulate:a", 1.0, 0.3)
-	sfx.coin.play()
-
-
 func _physics_process(delta: float) -> void:
 	if state != State.RACE and state != State.FINISHED: return
-	var ranks_before := _ranks()
+	tick += 1
+	var check := tick % 6 == 0       # sıralama/olay kontrolleri her 6 adımda bir (pahalı sıralama)
+	var ranks_before := _ranks() if check else {}
 	for c in cars: _drive(c, delta)
 	_contacts(delta)
 	for c in cars:
 		if not c.finished and c.s >= LAPS * track.length:
 			c.finished = true
+			c.time = race_time
 			finish_order.append(c)
 			if c.player: _finish_player()
-	_overtake_check(ranks_before)
-	_near_miss()
+	if check:
+		_overtake_check(ranks_before)
+		_near_miss()
 
 
 func _process(delta: float) -> void:
@@ -865,9 +1046,10 @@ func _update_camera(delta: float) -> void:
 	vel.y = 0.0
 	var vdir: Vector3 = vel.normalized() if vel.length() > 6.0 else fwd
 	var want: Vector3 = fwd.lerp(vdir, 0.4).normalized()
+	if player.wreck > 0.0: want = cam_dir if cam_dir.length() > 0.5 else want
 	cam_dir = cam_dir.slerp(want, 1.0 - exp(-delta * 4.5)).normalized() if cam_dir.length() > 0.5 else want
 	var v: float = maxf(body.speed, 0.0)
-	var dist: float = 5.8 + v * 0.012 - (0.5 if player.boost else 0.0)
+	var dist: float = 5.8 + v * 0.012 - (0.5 if player.boost else 0.0) + (4.0 if player.wreck > 0.0 else 0.0)
 	var target: Vector3 = p - cam_dir * dist + Vector3.UP * (1.9 + v * 0.003)
 	# Yükseklik yumuşak takip (zıplamalarda sarsmasın)
 	cam_pos = cam_pos.lerp(target, 1.0 - exp(-delta * 14.0)) if cam_pos != Vector3.ZERO else target
@@ -931,8 +1113,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_ENTER:
 			if state == State.MENU: _start_race()
 			elif over.visible: _start_race()
-		elif event.keycode == KEY_ESCAPE and state != State.MENU:
-			_go_menu()
 
 
 # ---------------------------------------------------------------- arayüz
@@ -1028,170 +1208,6 @@ func _button(text: String, parent: Control, cb: Callable) -> Button:
 	return b
 
 
-func _build_ui() -> void:
-	var layer := CanvasLayer.new()
-	add_child(layer)
-	var root := Control.new()
-	_full(root)
-	root.theme = _theme()
-	layer.add_child(root)
-
-	# --- HUD
-	hud = Control.new()
-	_full(hud)
-	root.add_child(hud)
-	var pl := _panel(hud)
-	_box(pl, 0, 0, 120, 62, 200, 96)
-	_label("İLERLEME", 20, hud, Color(1, 0.75, 0.3), HORIZONTAL_ALIGNMENT_LEFT).position = Vector2(36, 18)
-	prog_label = _label("0 %", 46, hud, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
-	prog_label.position = Vector2(34, 40)
-	lap_label = _label("TUR 1/2", 22, hud, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_LEFT)
-	lap_label.position = Vector2(36, 118)
-	var pr := _panel(hud)
-	_box(pr, 1, 0, -120, 62, 200, 96)
-	var sl := _label("SIRA", 20, hud, Color(1, 0.75, 0.3), HORIZONTAL_ALIGNMENT_RIGHT)
-	_box(sl, 1, 0, -100, 26, 140, 30)
-	pos_label = _label("4/4", 50, hud, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT)
-	_box(pos_label, 1, 0, -100, 72, 160, 56)
-	time_label = _label("0:00.00", 26, hud, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT)
-	_box(time_label, 1, 0, -100, 132, 200, 34)
-	nitro_bar = ProgressBar.new()
-	nitro_bar.show_percentage = false
-	nitro_bar.max_value = 1.0
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0, 0, 0, 0.45)
-	bg.skew = Vector2(-0.3, 0)
-	bg.set_corner_radius_all(4)
-	var fg := StyleBoxFlat.new()
-	fg.bg_color = Color(0.25, 0.75, 1.0)
-	fg.skew = Vector2(-0.3, 0)
-	fg.set_corner_radius_all(4)
-	nitro_bar.add_theme_stylebox_override("background", bg)
-	nitro_bar.add_theme_stylebox_override("fill", fg)
-	nitro_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_box(nitro_bar, 0.5, 0, 20, 34, 380, 20)
-	hud.add_child(nitro_bar)
-	var nl := _label("N₂O", 26, hud, Color(0.5, 0.85, 1.0))
-	_box(nl, 0.5, 0, -210, 34, 70, 34)
-	speedo = Control.new()
-	speedo.set_script(load("res://scripts/speedo.gd"))
-	if touch_mode: _box(speedo, 0.5, 1, 0, -105, 200, 200)
-	else: _box(speedo, 1, 1, -140, -140, 250, 250)
-	hud.add_child(speedo)
-	big_label = _label("", 140, hud, Color(1.0, 0.85, 0.2))
-	_box(big_label, 0.5, 0.4, 0, 0, 800, 180)
-	big_label.modulate.a = 0
-	popup_label = _label("", 40, hud, Color.WHITE)
-	_box(popup_label, 0.5, 0.25, 0, 0, 900, 70)
-	popup_label.modulate.a = 0
-
-	# --- Dokunmatik kontroller
-	controls = Control.new()
-	_full(controls)
-	root.add_child(controls)
-	zones["left"] = _zone(controls, "‹", 0, 1, 110, -95, 170, 140)
-	zones["right"] = _zone(controls, "›", 0, 1, 300, -95, 170, 140)
-	zones["gas"] = _zone(controls, "GAZ", 1, 1, -110, -105, 170, 170, Color(0.1, 0.5, 0.15, 0.5))
-	zones["brake"] = _zone(controls, "FREN", 1, 1, -300, -90, 130, 110, Color(0.5, 0.1, 0.1, 0.5))
-	zones["handbrake"] = _zone(controls, "EL FRENİ", 1, 1, -300, -230, 130, 90)
-	zones["nitro"] = _zone(controls, "NİTRO", 1, 1, -110, -300, 150, 100, Color(0.05, 0.35, 0.8, 0.55))
-	var keys := _label("W gaz   S fren/geri   A/D direksiyon   BOŞLUK el freni (drift)   SHIFT nitro   R piste dön", 17, hud, Color(1, 1, 1, 0.7))
-	_box(keys, 0.5, 1, -60, -22, 1000, 30)
-	keys.visible = not touch_mode
-
-	# --- Menü
-	menu = Control.new()
-	_full(menu)
-	root.add_child(menu)
-	var shade := ColorRect.new()
-	shade.color = Color(0, 0, 0, 0.0)
-	_full(shade)
-	menu.add_child(shade)
-	var title := _label("HİPER YARIŞ", 92, menu, Color(1.0, 0.6, 0.1))
-	_box(title, 0.5, 0, 0, 70, 1000, 110)
-	var sub := _label("KANYON  •  10 ARAÇ  •  2 TUR", 26, menu, Color(1, 1, 1, 0.9))
-	_box(sub, 0.5, 0, 0, 128, 800, 36)
-	coin_label = _label("", 30, menu, Color(1, 0.85, 0.3), HORIZONTAL_ALIGNMENT_RIGHT)
-	_box(coin_label, 1, 0, -170, 40, 300, 40)
-	var lp := _button("◀", menu, _paint_step.bind(-1))
-	_box(lp, 0.5, 1, -310, -170, 90, 80)
-	var rp := _button("▶", menu, _paint_step.bind(1))
-	_box(rp, 0.5, 1, 310, -170, 90, 80)
-	paint_label = _label("", 34, menu)
-	_box(paint_label, 0.5, 1, 0, -170, 520, 60)
-	buy_button = _button("YARIŞ!", menu, _on_main_button)
-	_box(buy_button, 0.5, 1, 0, -75, 360, 84)
-	motor_button = _button("", menu, _upgrade.bind("motor"))
-	motor_button.add_theme_font_size_override("font_size", 22)
-	_box(motor_button, 0, 0, 180, 215, 300, 64)
-	nitro_button = _button("", menu, _upgrade.bind("nitro"))
-	nitro_button.add_theme_font_size_override("font_size", 22)
-	_box(nitro_button, 0, 0, 180, 290, 300, 64)
-	quality_button = _button("", menu, _cycle_quality)
-	quality_button.add_theme_font_size_override("font_size", 20)
-	_box(quality_button, 0, 0, 180, 365, 300, 56)
-	var credit := _label("Araçlar: Eric Chadwick/DGG, ollitei, Han66st, Daniel Zhabotinsky (CC BY 4.0) · Çevre: Poly Haven (CC0) · Ses: Kenney (CC0) · Fizik: Godot Jolt", 14, menu, Color(1, 1, 1, 0.55))
-	_box(credit, 0.5, 1, 0, -14, 1200, 22)
-
-	# --- Yarış sonu
-	over = Control.new()
-	_full(over)
-	root.add_child(over)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
-	_full(dim)
-	over.add_child(dim)
-	over_place = _label("1.", 180, over)
-	_box(over_place, 0.5, 0.28, 0, 0, 500, 220)
-	over_info = _label("", 40, over)
-	_box(over_info, 0.5, 0.58, 0, 0, 800, 170)
-	next_button = _button("SONRAKİ YARIŞ", over, _start_race)
-	_box(next_button, 0.5, 0.82, -170, 0, 320, 80)
-	var garage := _button("GARAJ", over, _go_menu)
-	_box(garage, 0.5, 0.82, 180, 0, 240, 80)
-
-
-func _zone(parent: Control, text: String, ax: float, ay: float, ox: float, oy: float, w: float, h: float, color := Color(0.05, 0.07, 0.1, 0.45)) -> Control:
-	var p := Panel.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = color
-	sb.set_corner_radius_all(int(minf(w, h) * 0.3))
-	sb.corner_detail = 12
-	sb.set_border_width_all(2)
-	sb.border_color = Color(1, 1, 1, 0.35)
-	sb.anti_aliasing = true
-	p.add_theme_stylebox_override("panel", sb)
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_box(p, ax, ay, ox, oy, w, h)
-	parent.add_child(p)
-	var l := _label(text, 24 if text.length() > 2 else 60, p)
-	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	return p
-
-func _update_hud() -> void:
-	if not hud.visible: return
-	var ranks := _ranks()
-	pos_label.text = "%d/%d" % [ranks[player.id], cars.size()]
-	var prog: float = clampf(player.s / (LAPS * track.length), 0.0, 1.0)
-	prog_label.text = "%d %%" % int(prog * 100.0)
-	lap_label.text = "TUR %d/%d" % [clampi(int(player.s / track.length) + 1, 1, LAPS), LAPS]
-	time_label.text = _fmt_time(race_time)
-	nitro_bar.value = player.nitro
-	speedo.speed_kmh = absf(player.body.speed) * 3.6
-	speedo.nitro = player.nitro
-	speedo.boosting = player.boost
-	for c in cars:
-		if c.tag:
-			var r: int = ranks[c.id]
-			c.tag.text = "%d.  %s" % [r, c.name]
-			c.tag.modulate = Color(1, 0.85, 0.3) if r == 1 else Color.WHITE
-			var ahead: float = c.s - player.s
-			c.tag.visible = ahead > 6.0 and ahead < 90.0 and _ahead_rank(c) < 3
-	for name in zones:
-		var z: Control = zones[name]
-		z.modulate.a = 1.0 if _pressed(name) else 0.7
-
-
 ## Oyuncunun önündeki araçlar arasında bu aracın sırası (0 = en yakın)
 func _ahead_rank(car: Dictionary) -> int:
 	var d: float = car.s - player.s
@@ -1212,6 +1228,7 @@ func _paint_step(d: int) -> void:
 	cars[cars.find(old)] = player
 	old.body.queue_free()
 	old.sparks.queue_free()
+	old.debris.queue_free()
 	_refresh_menu()
 
 
@@ -1237,25 +1254,6 @@ func _upgrade(kind: String) -> void:
 	_refresh_menu()
 
 
-func _refresh_menu() -> void:
-	var p: Dictionary = GARAGE[paint_index]
-	var owned: bool = save.paints.has(paint_index)
-	paint_label.text = p.name + ("" if owned else "  —  %d ●" % p.price)
-	buy_button.text = "YARIŞ!" if owned else "SATIN AL"
-	buy_button.disabled = not owned and int(save.coins) < int(p.price)
-	coin_label.text = "● %d    YARIŞ %d" % [save.coins, save.level]
-	quality_button.text = "GRAFİK: %s" % ["DÜŞÜK", "ORTA", "YÜKSEK"][quality]
-	for pair in [[motor_button, "motor", "MOTOR"], [nitro_button, "nitro", "NİTRO"]]:
-		var lvl: int = int(save[pair[1]])
-		var b: Button = pair[0]
-		if lvl >= UPGRADE_COST.size():
-			b.text = "%s  MAKS" % pair[2]
-			b.disabled = true
-		else:
-			b.text = "%s  Sv%d → %d ●" % [pair[2], lvl + 1, UPGRADE_COST[lvl]]
-			b.disabled = int(save.coins) < UPGRADE_COST[lvl]
-
-
 func _popup(text: String, color: Color) -> void:
 	popup_label.text = text
 	popup_label.add_theme_color_override("font_color", color)
@@ -1274,6 +1272,391 @@ func _pop(l: Label) -> void:
 	tw.tween_property(l, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_interval(0.45)
 	tw.tween_property(l, "modulate:a", 0.0, 0.2)
+
+
+func _build_ui() -> void:
+	var layer := CanvasLayer.new()
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS   # duraklatmada da arayüz çalışsın
+	add_child(layer)
+	var root := Control.new()
+	_full(root)
+	root.theme = _theme()
+	layer.add_child(root)
+	var pin := Node.new()
+	pin.set_script(load("res://scripts/pause_input.gd"))
+	pin.toggle.connect(_toggle_pause)
+	add_child(pin)
+
+	# --- HUD
+	hud = Control.new()
+	_full(hud)
+	root.add_child(hud)
+	var pl := _panel(hud)
+	_box(pl, 0, 0, 150, 70, 260, 112)
+	var sl := _label("SIRA", 18, pl, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	sl.position = Vector2(20, 8)
+	pos_label = _label("10/10", 54, pl, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	pos_label.position = Vector2(18, 26)
+	lap_label = _label("TUR 1/2", 20, pl, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_RIGHT)
+	_box(lap_label, 1, 0, -70, 30, 120, 28)
+	time_label = _label("0:00.00", 22, pl, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT)
+	_box(time_label, 1, 0, -70, 62, 120, 30)
+	# İlerleme çubuğu (üst orta)
+	progress_bar = ProgressBar.new()
+	progress_bar.show_percentage = false
+	progress_bar.max_value = 1.0
+	progress_bar.add_theme_stylebox_override("background", _flat(Color(0, 0, 0, 0.5), 6))
+	progress_bar.add_theme_stylebox_override("fill", _flat(ACCENT, 6))
+	progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_box(progress_bar, 0.5, 0, 0, 26, 420, 12)
+	hud.add_child(progress_bar)
+	prog_label = _label("0 %", 18, hud, Color(1, 1, 1, 0.85))
+	_box(prog_label, 0.5, 0, 0, 48, 200, 26)
+	# Duraklat
+	var pause_b := _button("II", hud, _toggle_pause)
+	pause_b.add_theme_font_size_override("font_size", 26)
+	_box(pause_b, 0.5, 0, 0, 92, 64, 52)
+	# Mini harita
+	minimap = Control.new()
+	minimap.set_script(load("res://scripts/minimap.gd"))
+	_box(minimap, 1, 0, -128, 118, 220, 200)
+	hud.add_child(minimap)
+	speedo = Control.new()
+	speedo.set_script(load("res://scripts/speedo.gd"))
+	if touch_mode: _box(speedo, 0.5, 1, 0, -100, 190, 190)
+	else: _box(speedo, 1, 1, -140, -140, 250, 250)
+	hud.add_child(speedo)
+	big_label = _label("", 150, hud, ACCENT_2)
+	_box(big_label, 0.5, 0.4, 0, 0, 800, 190)
+	big_label.modulate.a = 0
+	popup_label = _label("", 38, hud, Color.WHITE)
+	_box(popup_label, 0.5, 0.3, 0, 0, 900, 64)
+	popup_label.modulate.a = 0
+
+	# --- Dokunmatik kontroller
+	controls = Control.new()
+	_full(controls)
+	root.add_child(controls)
+	zones["left"] = _zone(controls, "◀", 0, 1, 105, -100, 180, 150)
+	zones["right"] = _zone(controls, "▶", 0, 1, 300, -100, 180, 150)
+	zones["gas"] = _zone(controls, "GAZ", 1, 1, -105, -110, 170, 180, Color(0.1, 0.55, 0.2, 0.55))
+	zones["brake"] = _zone(controls, "FREN", 1, 1, -290, -90, 150, 120, Color(0.6, 0.12, 0.1, 0.55))
+	zones["handbrake"] = _zone(controls, "DRİFT", 1, 1, -290, -235, 150, 100)
+	zones["nitro"] = _zone(controls, "NİTRO", 1, 1, -105, -305, 170, 110, Color(0.05, 0.3, 0.75, 0.55))
+	nitro_fill = ColorRect.new()
+	nitro_fill.color = Color(0.3, 0.75, 1.0, 0.55)
+	nitro_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	zones["nitro"].add_child(nitro_fill)
+	zones["nitro"].move_child(nitro_fill, 0)
+	keys_label = _label("W gaz · S fren/geri · A/D direksiyon · BOŞLUK drift · SHIFT nitro · R piste dön · ESC duraklat", 16, hud, Color(1, 1, 1, 0.65))
+	_box(keys_label, 0.5, 1, -80, -20, 1000, 28)
+	keys_label.visible = not touch_mode
+
+	# --- Menü (garaj)
+	menu = Control.new()
+	_full(menu)
+	root.add_child(menu)
+	var title := _label("HİPER YARIŞ", 64, menu, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	_box(title, 0, 0, 300, 52, 560, 80)
+	var sub := _label("KANYON  •  10 ARAÇ  •  2 TUR", 20, menu, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_LEFT)
+	_box(sub, 0, 0, 300, 98, 560, 30)
+	var top_r := _panel(menu)
+	_box(top_r, 1, 0, -170, 50, 300, 64)
+	coin_label = _label("", 26, top_r, ACCENT_2, HORIZONTAL_ALIGNMENT_CENTER)
+	coin_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Sol panel: araç bilgisi
+	var car_p := _panel(menu)
+	_box(car_p, 0, 0.5, 200, 30, 360, 300)
+	var gl := _label("GARAJ", 18, car_p, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	gl.position = Vector2(20, 12)
+	paint_label = _label("", 26, car_p, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	paint_label.position = Vector2(20, 36)
+	paint_label.size = Vector2(330, 70)
+	paint_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	paint_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	stat_bars.clear()
+	var y := 118.0
+	for st in ["HIZ", "İVME", "TUTUŞ"]:
+		var l := _label(st, 18, car_p, Color(1, 1, 1, 0.8), HORIZONTAL_ALIGNMENT_LEFT)
+		l.position = Vector2(20, y)
+		var pb := ProgressBar.new()
+		pb.show_percentage = false
+		pb.max_value = 1.0
+		pb.add_theme_stylebox_override("background", _flat(Color(1, 1, 1, 0.12), 4))
+		pb.add_theme_stylebox_override("fill", _flat(ACCENT, 4))
+		pb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pb.position = Vector2(110, y + 6)
+		pb.size = Vector2(225, 14)
+		car_p.add_child(pb)
+		stat_bars.append(pb)
+		y += 34.0
+	var lp := _button("◀", car_p, _paint_step.bind(-1))
+	lp.position = Vector2(20, 228)
+	lp.size = Vector2(80, 56)
+	var rp := _button("▶", car_p, _paint_step.bind(1))
+	rp.position = Vector2(260, 228)
+	rp.size = Vector2(80, 56)
+	price_label = _label("", 22, car_p, ACCENT_2)
+	price_label.position = Vector2(100, 238)
+	price_label.size = Vector2(160, 36)
+	# Sağ panel: yükseltmeler ve ayarlar
+	var up_p := _panel(menu)
+	_box(up_p, 1, 0.5, -180, 30, 320, 300)
+	var ul := _label("YÜKSELTMELER", 18, up_p, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	ul.position = Vector2(20, 12)
+	motor_button = _button("", up_p, _upgrade.bind("motor"))
+	motor_button.add_theme_font_size_override("font_size", 20)
+	motor_button.position = Vector2(20, 46)
+	motor_button.size = Vector2(280, 60)
+	nitro_button = _button("", up_p, _upgrade.bind("nitro"))
+	nitro_button.add_theme_font_size_override("font_size", 20)
+	nitro_button.position = Vector2(20, 116)
+	nitro_button.size = Vector2(280, 60)
+	var sl2 := _label("AYARLAR", 18, up_p, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	sl2.position = Vector2(20, 190)
+	quality_button = _button("", up_p, _cycle_quality)
+	quality_button.add_theme_font_size_override("font_size", 20)
+	quality_button.position = Vector2(20, 222)
+	quality_button.size = Vector2(280, 58)
+	buy_button = _button("YARIŞ!", menu, _on_main_button)
+	buy_button.add_theme_font_size_override("font_size", 40)
+	_box(buy_button, 0.5, 1, 0, -70, 380, 86)
+	var credit := _label("Araçlar: Eric Chadwick/DGG, ollitei, Han66st, Daniel Zhabotinsky (CC BY 4.0) · Çevre: Poly Haven (CC0) · Ses: Kenney (CC0) · Fizik: Godot Jolt", 13, menu, Color(1, 1, 1, 0.5))
+	_box(credit, 0.5, 1, 0, -12, 1200, 20)
+
+	# --- Duraklatma
+	pause_menu = Control.new()
+	_full(pause_menu)
+	root.add_child(pause_menu)
+	var pdim := ColorRect.new()
+	pdim.color = Color(0, 0, 0, 0.6)
+	_full(pdim)
+	pdim.mouse_filter = Control.MOUSE_FILTER_STOP
+	pause_menu.add_child(pdim)
+	var pt := _label("DURAKLATILDI", 56, pause_menu, Color.WHITE)
+	_box(pt, 0.5, 0.25, 0, 0, 700, 80)
+	var b1 := _button("DEVAM", pause_menu, _toggle_pause)
+	_box(b1, 0.5, 0.45, 0, 0, 340, 76)
+	var b2 := _button("YENİDEN BAŞLAT", pause_menu, func(): _toggle_pause(); _start_race())
+	_box(b2, 0.5, 0.6, 0, 0, 340, 70)
+	var b3 := _button("GARAJ", pause_menu, func(): _toggle_pause(); _go_menu())
+	_box(b3, 0.5, 0.75, 0, 0, 340, 70)
+	pause_menu.visible = false
+
+	# --- Yarış sonu: sıralama tablosu
+	over = Control.new()
+	_full(over)
+	root.add_child(over)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.6)
+	_full(dim)
+	over.add_child(dim)
+	over_place = _label("1.", 120, over, ACCENT_2)
+	_box(over_place, 0.25, 0.3, 0, 0, 420, 150)
+	over_info = _label("", 32, over)
+	_box(over_info, 0.25, 0.55, 0, 0, 460, 160)
+	var tp := _panel(over, Color(0, 0, 0, 0.55))
+	_box(tp, 0.7, 0.45, 0, 0, 520, 500)
+	results_box = VBoxContainer.new()
+	results_box.position = Vector2(20, 16)
+	results_box.size = Vector2(480, 470)
+	results_box.add_theme_constant_override("separation", 2)
+	tp.add_child(results_box)
+	next_button = _button("SONRAKİ YARIŞ", over, _start_race)
+	_box(next_button, 0.25, 0.8, 0, 0, 340, 76)
+	var garage := _button("GARAJ", over, _go_menu)
+	_box(garage, 0.25, 0.92, 0, 0, 240, 56)
+
+	# --- Yükleniyor
+	loading = ColorRect.new()
+	loading.color = Color(0.06, 0.05, 0.05, 1.0)
+	_full(loading)
+	loading.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(loading)
+	var lt := _label("HİPER YARIŞ", 72, loading, ACCENT)
+	_box(lt, 0.5, 0.45, 0, 0, 800, 90)
+	var ll := _label("Yükleniyor…", 26, loading, Color(1, 1, 1, 0.8))
+	_box(ll, 0.5, 0.58, 0, 0, 600, 40)
+	loading.visible = false
+
+
+func _flat(c: Color, r: int) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = c
+	sb.set_corner_radius_all(r)
+	return sb
+
+
+func _zone(parent: Control, text: String, ax: float, ay: float, ox: float, oy: float, w: float, h: float, color := Color(0.05, 0.07, 0.1, 0.5)) -> Control:
+	var p := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = color
+	sb.set_corner_radius_all(int(minf(w, h) * 0.22))
+	sb.corner_detail = 10
+	sb.set_border_width_all(2)
+	sb.border_color = Color(1, 1, 1, 0.4)
+	sb.anti_aliasing = true
+	p.add_theme_stylebox_override("panel", sb)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.clip_contents = true
+	_box(p, ax, ay, ox, oy, w, h)
+	parent.add_child(p)
+	var l := _label(text, 26 if text.length() > 2 else 58, p)
+	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	return p
+
+
+func _toggle_pause() -> void:
+	if state != State.RACE and state != State.COUNTDOWN and not get_tree().paused: return
+	var p := not get_tree().paused
+	get_tree().paused = p
+	pause_menu.visible = p
+	touches.clear()
+	if p: engine.stream_paused = true
+	else: engine.stream_paused = false
+
+
+func _update_hud() -> void:
+	if not hud.visible: return
+	if Engine.get_process_frames() % 5 == 0 or hud_ranks.is_empty(): hud_ranks = _ranks()
+	var ranks := hud_ranks
+	pos_label.text = "%d/%d" % [ranks[player.id], cars.size()]
+	var prog: float = clampf(player.s / (LAPS * track.length), 0.0, 1.0)
+	progress_bar.value = prog
+	prog_label.text = "%d %%" % int(prog * 100.0)
+	lap_label.text = "TUR %d/%d" % [clampi(int(player.s / track.length) + 1, 1, LAPS), LAPS]
+	time_label.text = _fmt_time(race_time)
+	speedo.speed_kmh = absf(player.body.speed) * 3.6
+	speedo.nitro = player.nitro
+	speedo.boosting = player.boost
+	var nz: Control = zones["nitro"]
+	nitro_fill.position = Vector2(0, nz.size.y * (1.0 - player.nitro))
+	nitro_fill.size = Vector2(nz.size.x, nz.size.y * player.nitro)
+	for c in cars:
+		if c.tag:
+			var r: int = ranks[c.id]
+			c.tag.text = "%d.  %s" % [r, c.name]
+			c.tag.modulate = ACCENT_2 if r == 1 else Color.WHITE
+			var ahead: float = c.s - player.s
+			c.tag.visible = ahead > 6.0 and ahead < 90.0 and _ahead_rank(c) < 3
+	for name in zones:
+		var z: Control = zones[name]
+		z.modulate = Color(1.25, 1.25, 1.25, 1.0) if _pressed(name) else Color(1, 1, 1, 0.75)
+
+
+func _car_stats(i: int) -> Dictionary:
+	# Pahalı araçlar daha güçlü ve daha iyi yol tutar
+	return {"power": 290.0 + i * 9.0, "grip": 1.0 + i * 0.02}
+
+
+func _refresh_menu() -> void:
+	var p: Dictionary = GARAGE[paint_index]
+	var owned: bool = save.paints.has(paint_index)
+	paint_label.text = p.name
+	var st := _car_stats(paint_index)
+	var pw: float = st.power + 22.0 * int(save.motor)
+	stat_bars[0].value = clampf((pow(pw, 1.0 / 3.0) - 6.0) / (8.2 - 6.0), 0.05, 1.0)
+	stat_bars[1].value = clampf((pw - 260.0) / 260.0, 0.05, 1.0)
+	stat_bars[2].value = clampf((st.grip - 0.95) / 0.3, 0.05, 1.0)
+	price_label.text = "SAHİPSİN" if owned else "%d ●" % p.price
+	price_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6) if owned else ACCENT_2)
+	buy_button.text = "YARIŞ!" if owned else "SATIN AL  %d ●" % p.price
+	buy_button.disabled = not owned and int(save.coins) < int(p.price)
+	coin_label.text = "● %d     YARIŞ %d" % [save.coins, save.level]
+	quality_button.text = "GRAFİK: %s" % ["DÜŞÜK", "ORTA", "YÜKSEK"][quality]
+	for pair in [[motor_button, "motor", "MOTOR"], [nitro_button, "nitro", "NİTRO"]]:
+		var lvl: int = int(save[pair[1]])
+		var b: Button = pair[0]
+		var pips := "Sv %d/%d" % [lvl, UPGRADE_COST.size()]
+		if lvl >= UPGRADE_COST.size():
+			b.text = "%s  %s  MAKS" % [pair[2], pips]
+			b.disabled = true
+		else:
+			b.text = "%s  %s  %d ●" % [pair[2], pips, UPGRADE_COST[lvl]]
+			b.disabled = int(save.coins) < UPGRADE_COST[lvl]
+
+
+func _finish_player() -> void:
+	state = State.FINISHED
+	var place: int = finish_order.find(player) + 1
+	var prize: int = PRIZES[place - 1]
+	save.coins = int(save.coins) + prize
+	if place <= 3: save.level = int(save.level) + 1
+	_write_save()
+	over_place.text = "%d." % place
+	var cols := [Color(1, 0.82, 0.2), Color(0.85, 0.88, 0.95), Color(0.9, 0.6, 0.35)]
+	over_place.add_theme_color_override("font_color", cols[place - 1] if place <= 3 else Color(0.8, 0.8, 0.8))
+	var titles := ["ZAFER!", "İKİNCİ!", "ÜÇÜNCÜ!"]
+	over_info.text = "%s\nSÜRE  %s\n+%d ●" % [titles[place - 1] if place <= 3 else "%d. SIRA" % place, _fmt_time(race_time), prize]
+	next_button.text = "SONRAKİ YARIŞ" if place <= 3 else "TEKRAR DENE"
+	controls.visible = false
+	hud.visible = false
+	await get_tree().create_timer(1.5).timeout
+	if state != State.FINISHED: return
+	_fill_results()
+	over.visible = true
+	over.modulate.a = 0.0
+	create_tween().tween_property(over, "modulate:a", 1.0, 0.3)
+	sfx.coin.play()
+
+
+func _fill_results() -> void:
+	for ch in results_box.get_children(): ch.queue_free()
+	var head := _result_row("#", "SÜRÜCÜ", "SÜRE", Color(1, 1, 1, 0.6), false)
+	results_box.add_child(head)
+	var order: Array = finish_order.duplicate()
+	var rest: Array = cars.filter(func(c): return not c.finished)
+	rest.sort_custom(func(a, b): return a.s > b.s)
+	order.append_array(rest)
+	for i in order.size():
+		var c: Dictionary = order[i]
+		var t: String = _fmt_time(c.time) if c.has("time") else "+%d m" % int(LAPS * track.length - c.s)
+		results_box.add_child(_result_row("%d" % (i + 1), c.name, t, ACCENT_2 if c.player else Color.WHITE, c.player))
+
+
+func _result_row(a: String, b: String, c: String, col: Color, hl: bool) -> Control:
+	var row := Panel.new()
+	row.custom_minimum_size = Vector2(480, 40)
+	row.add_theme_stylebox_override("panel", _flat(Color(1, 0.55, 0.1, 0.25) if hl else Color(1, 1, 1, 0.04), 6))
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var la := _label(a, 22, row, col, HORIZONTAL_ALIGNMENT_LEFT)
+	la.position = Vector2(14, 4)
+	var lb := _label(b, 22, row, col, HORIZONTAL_ALIGNMENT_LEFT)
+	lb.position = Vector2(70, 4)
+	var lc := _label(c, 22, row, col, HORIZONTAL_ALIGNMENT_RIGHT)
+	lc.position = Vector2(300, 4)
+	lc.size = Vector2(160, 32)
+	return row
+
+
+## Açılışta tüm araç malzemelerini ve efektleri bir kez çizdirerek shader derleme takılmalarını önler.
+func _warmup() -> void:
+	loading.visible = true
+	var temp: Array = []
+	var origin := track.point(-40.0, 0.0)
+	var fwd := track.tangent(-40.0)
+	var side := fwd.cross(Vector3.UP)
+	var i := 0
+	for m in MODELS:
+		var c := _make_car(m, Color(0.5, 0.5, 0.5), false, -40.0, 0.0)
+		c.body.freeze = true
+		c.body.global_position = origin + side * ((i % 4) - 1.5) * 2.6 + fwd * (int(i / 4) * 5.0)
+		for f in c.flames: f.emitting = true
+		c.smoke.emitting = true
+		c.sparks.global_position = c.body.global_position + Vector3.UP
+		c.sparks.restart()
+		c.debris.global_position = c.body.global_position + Vector3.UP
+		c.debris.restart()
+		temp.append(c)
+		i += 1
+	camera.global_position = origin - fwd * 12.0 + Vector3.UP * 4.0
+	camera.look_at(origin + fwd * 6.0)
+	for k in 4: await get_tree().process_frame
+	for c in temp:
+		c.body.queue_free()
+		c.sparks.queue_free()
+		c.debris.queue_free()
+	loading.visible = false
 
 
 # ---------------------------------------------------------------- kayıt
