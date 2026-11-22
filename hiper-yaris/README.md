@@ -6,6 +6,7 @@ Gerçekçi grafikli 3D arcade yarış oyunu — Godot 4.3, Forward+ (telefonda M
 - **Gerçek araç fiziği** (Jolt Physics): 4 tekerlek yay+amortisörlü süspansiyon, lastik tutuşu, motor gücü eğrisi, aerodinamik bastırma, el freniyle kontrollü drift
 - **Çarpışma fiziği:** sert darbelerde araçlar kontrolden çıkıp takla atar, enkaz saçılır; oyuncu kazasında ağır çekim; rakibe sert vuruş = TAKEDOWN
 - PC: **W** gaz, **S** fren/geri, **A/D** direksiyon, **Boşluk** el freni (drift), **Shift** nitro, **R** piste dön, **Esc** duraklat
+- **Yarış atmosferi:** tempolu müzik, seyirci tribünleri ve tezahürat, sponsor afişleri, start ışıkları, rakip motor sesleri, fren izleri, "SON TUR" duyurusu, bitişte konfeti, yüksek hızda hız çizgileri
 - Telefon (yatay): ekranda ◀ ▶, GAZ, FREN, DRİFT, NİTRO butonları
 - Arayüz: mini harita, ilerleme çubuğu, duraklatma menüsü, 10 araçlık sonuç tablosu, araç istatistikli garaj
 - Grafik kalitesi menüden: DÜŞÜK (telefon varsayılanı) / ORTA / YÜKSEK
@@ -30,6 +31,6 @@ Gerçekçi grafikli 3D arcade yarış oyunu — Godot 4.3, Forward+ (telefonda M
 - Kayalar, dokular, gökyüzü (HDRI): **Poly Haven**, CC0
 - Fizik motoru: [Godot Jolt](https://github.com/godot-jolt/godot-jolt) (MIT)
 - Motor/kayma/çarpma sesleri ve duman: **Kenney**, CC0
-- Diğer kısa efektler `tools/build_sounds.py` ile üretilmiştir.
+- Kısa efektler `tools/build_sounds.py`, müzik ve seyirci sesleri `tools/build_music.py`, afiş/seyirci dokuları `tools/make_deco.py`, duman dokusu `tools/make_smoke.py` ile üretilmiştir.
 
 Varlıkları yeniden indirmek: `python3 tools/fetch_assets.py`

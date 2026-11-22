@@ -31,11 +31,11 @@ const MODELS := {
 	"exterminator": {"path": "res://assets/real/cars/exterminator.glb", "yaw": -PI / 2.0, "keep": [], "wheels": "*WheelsStock_*", "paint": false},
 }
 const GARAGE := [
-	{"name": "AURORA  •  BUZ MAVİSİ", "model": "concept", "color": Color(0.05, 0.3, 0.85), "price": 0},
+	{"name": "FURIA GT  •  YEŞİL", "model": "furia_a", "color": Color.WHITE, "price": 0},
 	{"name": "CHEETAH '84  •  KIRMIZI", "model": "cheetah", "color": Color.WHITE, "price": 150},
 	{"name": "STRADA GT  •  TURUNCU", "model": "sport_b", "color": Color.WHITE, "price": 250},
 	{"name": "EXTERMINATOR  •  TUNING", "model": "exterminator", "color": Color.WHITE, "price": 350},
-	{"name": "FURIA GT  •  YEŞİL", "model": "furia_a", "color": Color.WHITE, "price": 450},
+	{"name": "AURORA  •  BUZ MAVİSİ", "model": "concept", "color": Color(0.05, 0.3, 0.85), "price": 450},
 	{"name": "GOBLIN V12  •  ZEHİR YEŞİLİ", "model": "goblin", "color": Color(0.2, 0.7, 0.05), "price": 600},
 	{"name": "SABA V12  •  SARI", "model": "saba", "color": Color.WHITE, "price": 750},
 	{"name": "STRADA GT  •  KARBON", "model": "sport_a", "color": Color.WHITE, "price": 900},
@@ -67,6 +67,12 @@ var state := State.MENU
 var track: Track
 var model_scenes := {}
 var car_seq := 0
+var music: AudioStreamPlayer
+var skid_mm: MultiMesh
+var skid_i := 0
+var speed_lines: CPUParticles3D
+var confetti: CPUParticles3D
+var last_lap_shown := false
 var merged_cache := {}
 var tick := 0
 var hud_ranks := {}
@@ -143,6 +149,8 @@ func _ready() -> void:
 	for s in ["coin", "click", "nitro", "beep", "go"]:
 		_add_sfx(s, load("res://sounds/%s.wav" % s))
 	_add_sfx("impact", load("res://assets/audio/impact.ogg"))
+	_add_sfx("crowd", load("res://sounds/crowd.wav"))
+	_setup_music()
 	engine = _looping("res://assets/audio/engine.ogg", -4.0)
 	skid = _looping("res://assets/audio/skid.ogg", -60.0)
 	_build_world()
@@ -161,6 +169,31 @@ func _ready() -> void:
 func _setup_minimap() -> void:
 	await get_tree().process_frame
 	minimap.setup(track)
+
+
+## Müzik: "Music" ses yolu + menüde boğuk duyulsun diye alçak geçiren filtre
+func _setup_music() -> void:
+	var idx := AudioServer.bus_count
+	AudioServer.add_bus(idx)
+	AudioServer.set_bus_name(idx, "Music")
+	AudioServer.set_bus_volume_db(idx, -9.0)
+	var lp := AudioEffectLowPassFilter.new()
+	lp.cutoff_hz = 900.0
+	AudioServer.add_bus_effect(idx, lp)
+	music = AudioStreamPlayer.new()
+	var st: AudioStreamWAV = load("res://sounds/music_race.wav")
+	st.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	st.loop_end = st.data.size() / 2
+	music.stream = st
+	music.bus = "Music"
+	add_child(music)
+	music.play()
+
+
+func _music_muffled(on: bool) -> void:
+	var idx := AudioServer.get_bus_index("Music")
+	AudioServer.set_bus_effect_enabled(idx, 0, on)
+	AudioServer.set_bus_volume_db(idx, -11.0 if on else -9.0)
 
 
 func _add_sfx(id: String, stream: AudioStream) -> void:
@@ -235,7 +268,104 @@ func _build_world() -> void:
 	camera.far = 1500
 	camera.near = 0.1
 	add_child(camera)
+	_build_fx()
 	_apply_quality()
+
+
+## Fren izleri (halka tamponlu tek MultiMesh), hız çizgileri ve bitiş konfetisi
+func _build_fx() -> void:
+	skid_mm = MultiMesh.new()
+	skid_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var q := QuadMesh.new()
+	q.size = Vector2(0.32, 0.9)
+	q.orientation = PlaneMesh.FACE_Y
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.03, 0.03, 0.03, 0.55)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	q.material = m
+	skid_mm.mesh = q
+	skid_mm.instance_count = [500, 900, 1400][quality]
+	for i in skid_mm.instance_count: skid_mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ZERO), Vector3(0, -500, 0)))
+	var smi := MultiMeshInstance3D.new()
+	smi.multimesh = skid_mm
+	smi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	smi.custom_aabb = AABB(Vector3(-5000, -1000, -5000), Vector3(10000, 2000, 10000))
+	add_child(smi)
+	# Hız çizgileri: kameraya bağlı, yüksek hızda/nitroda ekran kenarlarından akar
+	speed_lines = CPUParticles3D.new()
+	speed_lines.emitting = false
+	speed_lines.amount = 40
+	speed_lines.lifetime = 0.35
+	speed_lines.local_coords = true
+	speed_lines.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	speed_lines.emission_box_extents = Vector3(4.0, 2.4, 0.5)
+	speed_lines.position = Vector3(0, 0, -9.0)
+	speed_lines.direction = Vector3(0, 0, 1)
+	speed_lines.spread = 0.0
+	speed_lines.gravity = Vector3.ZERO
+	speed_lines.initial_velocity_min = 30.0
+	speed_lines.initial_velocity_max = 45.0
+	var lq := BoxMesh.new()
+	lq.size = Vector3(0.015, 0.015, 1.6)
+	var lm := StandardMaterial3D.new()
+	lm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	lm.albedo_color = Color(1, 1, 1, 0.35)
+	lm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	lq.material = lm
+	speed_lines.mesh = lq
+	camera.add_child(speed_lines)
+	# Konfeti
+	confetti = CPUParticles3D.new()
+	confetti.emitting = false
+	confetti.one_shot = true
+	confetti.explosiveness = 0.8
+	confetti.amount = 160
+	confetti.lifetime = 3.0
+	confetti.local_coords = false
+	confetti.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	confetti.emission_box_extents = Vector3(8, 1, 3)
+	confetti.direction = Vector3(0, 1, 0)
+	confetti.spread = 50.0
+	confetti.initial_velocity_min = 6.0
+	confetti.initial_velocity_max = 12.0
+	confetti.gravity = Vector3(0, -4.0, 0)
+	confetti.damping_min = 1.0
+	confetti.damping_max = 2.0
+	confetti.angular_velocity_min = -400.0
+	confetti.angular_velocity_max = 400.0
+	var cq := QuadMesh.new()
+	cq.size = Vector2(0.12, 0.2)
+	var cm := StandardMaterial3D.new()
+	cm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	cm.vertex_color_use_as_albedo = true
+	cm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	cq.material = cm
+	confetti.mesh = cq
+	var cg := Gradient.new()
+	cg.offsets = PackedFloat32Array([0.0, 0.25, 0.5, 0.75, 1.0])
+	cg.colors = PackedColorArray([Color(1, 0.2, 0.2), Color(1, 0.85, 0.1), Color(0.2, 0.8, 0.3), Color(0.2, 0.5, 1), Color(1, 0.4, 0.9)])
+	confetti.color_initial_ramp = cg
+	add_child(confetti)
+
+
+## Arka tekerleklerin altına fren/drift izi bırak
+func _skid(car: Dictionary) -> void:
+	var body: Car = car.body
+	if not (body.on_ground >= 3 and body.slip > 0.35 and absf(body.speed) > 6.0): return
+	var d: float = car.get("skid_d", 0.0) + absf(body.speed) * get_physics_process_delta_time()
+	car.skid_d = d
+	if d < 0.7: return
+	car.skid_d = 0.0
+	var fwd := body.linear_velocity.normalized()
+	if fwd.length() < 0.5: return
+	for w in body.wheels:
+		if w.front or not w.contact: continue
+		var p: Vector3 = body.global_transform * Vector3(w.mount.x, 0.0, w.mount.z)
+		p.y = track.point(car.s, car.x).y + 0.035
+		var b := Basis.looking_at(Vector3(fwd.x, 0, fwd.z).normalized(), Vector3.UP)
+		skid_mm.set_instance_transform(skid_i, Transform3D(b, p))
+		skid_i = (skid_i + 1) % skid_mm.instance_count
 
 
 func _build_track() -> void:
@@ -332,6 +462,16 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 		tag.render_priority = 10
 		tag.outline_render_priority = 9
 		body.add_child(tag)
+	if not is_player:
+		var eng := AudioStreamPlayer3D.new()
+		var est: AudioStreamOggVorbis = load("res://assets/audio/engine.ogg").duplicate()
+		est.loop = true
+		eng.stream = est
+		eng.unit_size = 7.0
+		eng.max_distance = 90.0
+		eng.volume_db = -6.0
+		eng.name = "EngineSound"
+		body.add_child(eng)
 	car_seq += 1
 	var car := {
 		"id": car_seq, "body": body, "root": body, "model": model, "model_id": model_id,
@@ -366,11 +506,14 @@ func _load_model(model_id: String, parent: Node3D) -> Node3D:
 			if not ok: m.visible = false
 	for m in inst.find_children("*shadow*", "MeshInstance3D", true, false): m.visible = false
 	# Optimizasyon: dışarıdan görünmeyen iç parçaları gizle (her biri ayrı çizim çağrısı)
-	var hidden_words := ["interior", "pedal", "seat", "steering", "dash", "engine", "floormat", "badge", "caliper", "suspension", "_inner", "axle", "radiator"]
+	# Sadece dışarıdan görünmeyen küçük parçalar (taban/iskelet/direk gibi yapı parçaları kalır)
+	var hidden_words := ["pedal", "seat", "steering", "dash", "floormat", "badge", "axle", "radiator"]
 	for m in inst.find_children("*", "MeshInstance3D", true, false):
+		if OS.get_environment("NOHIDE") != "": break
 		var full := String(m.name).to_lower() + " " + String(m.get_parent().name).to_lower()
 		for w in hidden_words:
 			if full.contains(w):
+				if OS.get_environment("HIDELOG") != "": print("GİZLENDİ ", m.name, " / ", m.get_parent().name)
 				m.visible = false
 				break
 	var aabb := AABB()
@@ -442,6 +585,7 @@ func _fix_glass(model: Node3D) -> void:
 ## Optimizasyon: tekerlek dışındaki tüm parçaları malzemeye göre tek mesh'te birleştir
 ## (40-60 çizim çağrısı -> malzeme sayısı kadar) ve uzak mesafe için LOD üret. Sonuç önbelleğe alınır.
 func _merge_body(model: Node3D, pattern: String, cache_key: String) -> void:
+	if OS.get_environment("NOMERGE") != "": return
 	var inv := model.global_transform.affine_inverse()
 	var parts: Array = []
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
@@ -746,6 +890,10 @@ func _drive(car: Dictionary, delta: float) -> void:
 	for f in car.flames: f.emitting = body.nitro_on
 	var burnout: bool = body.throttle > 0.8 and absf(body.speed) < 12.0 and body.slip > 0.2
 	_set_smoke(car, body.on_ground >= 2 and ((body.slip > 0.3 and absf(body.speed) > 4.0) or burnout))
+	_skid(car)
+	if not car.player:
+		var es: AudioStreamPlayer3D = body.get_node_or_null("EngineSound")
+		if es: es.pitch_scale = 0.6 + absf(body.speed) / 45.0
 	# Kurtarma: ters dönme, takılma, ters yön, pist dışı
 	var up_dot: float = body.global_basis.y.dot(Vector3.UP)
 	car.flip = car.flip + delta if up_dot < 0.35 else 0.0
@@ -935,10 +1083,12 @@ func _setup_grid() -> void:
 				"tune": {"power_kw": lerpf(280.0, 340.0, diff)},
 			}))
 	for c in cars: c.body.freeze = true
+	for lm in track.start_lights: lm.emission = Color(0, 0, 0)
 
 
 func _go_menu() -> void:
 	Engine.time_scale = 1.0
+	if music: _music_muffled(true)
 	get_tree().paused = false
 	pause_menu.visible = false
 	state = State.MENU
@@ -962,6 +1112,14 @@ func _start_race() -> void:
 	_setup_grid()
 	state = State.COUNTDOWN
 	countdown = 3.0
+	last_lap_shown = false
+	_music_muffled(true)
+	# Geri sayımda fizik açık, frenler basılı: araçlar süspansiyonuna oturur (havada başlamaz)
+	for c in cars:
+		c.body.freeze = false
+		c.body.brake = 1.0
+		c.body.handbrake = true
+		c.body.throttle = 0.0
 	cam_dir = Vector3.ZERO
 	race_time = 0.0
 	menu.visible = false
@@ -1012,11 +1170,24 @@ func _process(delta: float) -> void:
 			countdown -= delta
 			if countdown <= 0.0:
 				state = State.RACE
-				for c in cars: c.body.freeze = false
+				for c in cars:
+					c.body.freeze = false
+					c.body.handbrake = false
+					c.body.brake = 0.0
+				for lm in track.start_lights: lm.emission = Color(0.1, 1.0, 0.2)
+				_music_muffled(false)
+				sfx.crowd.play()
+				for c in cars:
+					var es: Node = c.body.get_node_or_null("EngineSound")
+					if es: es.play()
+				big_label.add_theme_font_size_override("font_size", 150)
 				big_label.text = "GO!"
 				_pop(big_label)
 				sfx.go.play()
 			elif ceili(countdown) != before:
+				var lit := 5 - ceili(countdown) * 5 / 3
+				for li in track.start_lights.size():
+					track.start_lights[li].emission = Color(1.0, 0.05, 0.02) if li <= lit else Color(0, 0, 0)
 				big_label.text = str(ceili(countdown))
 				_pop(big_label)
 				sfx.beep.play()
@@ -1551,7 +1722,15 @@ func _update_hud() -> void:
 	var prog: float = clampf(player.s / (LAPS * track.length), 0.0, 1.0)
 	progress_bar.value = prog
 	prog_label.text = "%d %%" % int(prog * 100.0)
-	lap_label.text = "TUR %d/%d" % [clampi(int(player.s / track.length) + 1, 1, LAPS), LAPS]
+	var lap: int = clampi(int(player.s / track.length) + 1, 1, LAPS)
+	lap_label.text = "TUR %d/%d" % [lap, LAPS]
+	if lap == LAPS and not last_lap_shown and state == State.RACE:
+		last_lap_shown = true
+		big_label.text = "SON TUR!"
+		big_label.add_theme_font_size_override("font_size", 110)
+		_pop(big_label)
+		sfx.crowd.play()
+	speed_lines.emitting = state == State.RACE and (player.boost or absf(player.body.speed) > 62.0)
 	time_label.text = _fmt_time(race_time)
 	speedo.speed_kmh = absf(player.body.speed) * 3.6
 	speedo.nitro = player.nitro
@@ -1618,6 +1797,10 @@ func _finish_player() -> void:
 	next_button.text = "SONRAKİ YARIŞ" if place <= 3 else "TEKRAR DENE"
 	controls.visible = false
 	hud.visible = false
+	speed_lines.emitting = false
+	confetti.global_position = player.body.global_position + player.body.global_basis.z * 10.0 + Vector3.UP * 1.0
+	confetti.restart()
+	sfx.crowd.play()
 	await get_tree().create_timer(1.5).timeout
 	if state != State.FINISHED: return
 	_fill_results()

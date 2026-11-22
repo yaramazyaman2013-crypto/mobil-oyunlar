@@ -35,6 +35,8 @@ func build(points: Array, seed_value: int) -> void:
 	_build_env()
 	_build_gantry()
 	_build_poles()
+	_build_banners()
+	_build_stands()
 
 
 # ---------------------------------------------------------------- spline
@@ -355,6 +357,23 @@ func _build_gantry() -> void:
 	beam.material_override = mat
 	beam.position = Vector3(0, 7.6, 0)
 	root.add_child(beam)
+	# Başlangıç ışıkları (5 lamba): geri sayımda kırmızı, başlayınca yeşil
+	start_lights.clear()
+	for li in 5:
+		var lamp := MeshInstance3D.new()
+		var sp := SphereMesh.new()
+		sp.radius = 0.38
+		sp.height = 0.76
+		lamp.mesh = sp
+		var lm := StandardMaterial3D.new()
+		lm.albedo_color = Color(0.15, 0.02, 0.02)
+		lm.emission_enabled = true
+		lm.emission = Color(0, 0, 0)
+		lm.emission_energy_multiplier = 4.0
+		lamp.material_override = lm
+		lamp.position = Vector3((li - 2) * 1.2, 6.3, 0.35)
+		root.add_child(lamp)
+		start_lights.append(lm)
 	for zs in [-1.0, 1.0]:
 		var label := Label3D.new()
 		label.text = "HİPER YARIŞ  •  START / FINISH"
@@ -715,3 +734,118 @@ func _build_env() -> void:
 						var key: String = (dry if is_dry else plants).pick_random()
 						_put(key, r, randf_range(1.6, 3.2), randf() * TAU, 130.0 * r_far, false)
 	_flush_env()
+
+
+# ---------------------------------------------------------------- yarış atmosferi
+
+var start_lights: Array = []    # başlangıç kapısındaki ışıklar (main kontrol eder)
+var stands_center := Vector3.ZERO
+
+
+## Bariyerlerdeki sponsor afişleri (doku başına tek MultiMesh = 6 çizim çağrısı)
+func _build_banners() -> void:
+	var n := pos.size()
+	var xf := {}
+	var k := 0
+	for i in range(20, n, 35):   # ~70 m'de bir
+		var side := 1.0 if k % 2 == 0 else -1.0
+		var tex_i := k % 6
+		k += 1
+		var base: Vector3 = pos[i] + right[i] * side * (HALF + 0.85) + Vector3(0, 1.0, 0)
+		var inward: Vector3 = -right[i] * side
+		var b := Basis.looking_at(-inward, Vector3.UP)   # quad'ın önü (+Z) yola baksın
+		if not xf.has(tex_i): xf[tex_i] = []
+		xf[tex_i].append(Transform3D(b, base))
+	for tex_i in xf:
+		var q := QuadMesh.new()
+		q.size = Vector2(8.0, 1.0)
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = load("res://assets/deco/banner_%d.png" % tex_i)
+		m.roughness = 0.6
+		q.material = m
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = q
+		mm.instance_count = xf[tex_i].size()
+		for j in xf[tex_i].size(): mm.set_instance_transform(j, xf[tex_i][j])
+		var mi := MultiMeshInstance3D.new()
+		mi.multimesh = mm
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mi)
+
+
+## Başlangıç/bitiş çevresinde iki yanda seyirci tribünleri (pistin kıvrımını takip eder)
+func _build_stands() -> void:
+	var n := pos.size()
+	var crowd_mat := StandardMaterial3D.new()
+	crowd_mat.albedo_texture = load("res://assets/deco/crowd.png")
+	crowd_mat.roughness = 0.9
+	crowd_mat.texture_repeat = true
+	var concrete := StandardMaterial3D.new()
+	concrete.albedo_color = Color(0.62, 0.6, 0.58)
+	concrete.roughness = 0.95
+	var roof_m := StandardMaterial3D.new()
+	roof_m.albedo_color = Color(0.85, 0.32, 0.08)
+	roof_m.metallic = 0.4
+	roof_m.roughness = 0.5
+	roof_m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var i0 := -55   # -110 m
+	var i1 := 25    # +50 m
+	var sum := Vector3.ZERO
+	for side in [-1.0, 1.0]:
+		var crowd_st := SurfaceTool.new()
+		crowd_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var back_st := SurfaceTool.new()
+		back_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var roof_st := SurfaceTool.new()
+		roof_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var x0 := HALF + 4.0
+		var x1 := HALF + 15.0
+		for ii in range(i0, i1):
+			var a := (ii + n) % n
+			var b := (ii + 1 + n) % n
+			var pa: Vector3 = pos[a]
+			var pb: Vector3 = pos[b]
+			var ra: Vector3 = right[a] * side
+			var rb: Vector3 = right[b] * side
+			var u0 := (ii - i0) * DS / 7.0
+			var u1 := (ii + 1 - i0) * DS / 7.0
+			# Eğimli seyirci yüzeyi (yola bakar)
+			var v := [pa + ra * x0 + Vector3(0, 1.2, 0), pb + rb * x0 + Vector3(0, 1.2, 0), pb + rb * x1 + Vector3(0, 9.0, 0), pa + ra * x1 + Vector3(0, 9.0, 0)]
+			var uv := [Vector2(u0, 2.0), Vector2(u1, 2.0), Vector2(u1, 0.0), Vector2(u0, 0.0)]   # 16 sıra seyirci
+			var order := [0, 1, 2, 0, 2, 3] if side > 0 else [0, 2, 1, 0, 3, 2]
+			for t in order:
+				crowd_st.set_uv(uv[t])
+				crowd_st.add_vertex(v[t])
+			# Ön duvar (beton) ve arka duvar
+			var w := [pa + ra * x0 + Vector3(0, -1.0, 0), pb + rb * x0 + Vector3(0, -1.0, 0), pb + rb * x0 + Vector3(0, 1.2, 0), pa + ra * x0 + Vector3(0, 1.2, 0)]
+			for t in order:
+				back_st.add_vertex(w[t])
+			var bw := [pa + ra * x1 + Vector3(0, -1.0, 0), pb + rb * x1 + Vector3(0, -1.0, 0), pb + rb * x1 + Vector3(0, 11.5, 0), pa + ra * x1 + Vector3(0, 11.5, 0)]
+			for t in [order[0], order[2], order[1], order[3], order[5], order[4]]:
+				back_st.add_vertex(bw[t])
+			# Çatı
+			var rf := [pa + ra * (x0 + 1.0) + Vector3(0, 11.0, 0), pb + rb * (x0 + 1.0) + Vector3(0, 11.0, 0), pb + rb * (x1 + 0.5) + Vector3(0, 12.0, 0), pa + ra * (x1 + 0.5) + Vector3(0, 12.0, 0)]
+			for t in order:
+				roof_st.add_vertex(rf[t])
+			sum += pa
+		for pair in [[crowd_st, crowd_mat], [back_st, concrete], [roof_st, roof_m]]:
+			var st: SurfaceTool = pair[0]
+			st.generate_normals()
+			var mi := MeshInstance3D.new()
+			mi.mesh = st.commit()
+			mi.material_override = pair[1]
+			add_child(mi)
+	stands_center = sum / float((i1 - i0) * 2)
+	# Seyirci uğultusu (3D ses, tribünlerin yanında duyulur)
+	var amb := AudioStreamPlayer3D.new()
+	var st2: AudioStreamWAV = load("res://sounds/crowd_loop.wav")
+	st2.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	st2.loop_end = st2.data.size() / 2
+	amb.stream = st2
+	amb.unit_size = 30.0
+	amb.max_distance = 260.0
+	amb.volume_db = -4.0
+	amb.position = stands_center + Vector3(0, 4, 0)
+	amb.autoplay = true
+	add_child(amb)
