@@ -20,19 +20,8 @@ var _h := PackedFloat32Array()
 var _hw := 0
 var _hh := 0
 var _horigin := Vector2.ZERO
-const HCELL := 6.0
-const PLANTS := {
-	"othonna": "res://assets/real/plants/othonna_cerarioides/othonna_cerarioides.gltf",
-	"succulent": "res://assets/real/plants/cheiridopsis_succulent/cheiridopsis_succulent.gltf",
-	"quiver": "res://assets/real/plants/dead_quiver_branch_01/dead_quiver_branch_01.gltf",
-	"branches": "res://assets/real/plants/dry_branches_medium_01/dry_branches_medium_01.gltf",
-}
+var HCELL := 6.0
 
-const ROCKS := {
-	"boulder": "res://assets/real/rocks/namaqualand_boulder_02/namaqualand_boulder_02.gltf",
-	"boulders": "res://assets/real/rocks/namaqualand_boulders_01/namaqualand_boulders_01.gltf",
-	"stones": "res://assets/real/rocks/namaqualand_rocks_01/namaqualand_rocks_01.gltf",
-}
 
 
 func build(points: Array, seed_value: int) -> void:
@@ -43,8 +32,7 @@ func build(points: Array, seed_value: int) -> void:
 	_build_rails()
 	_build_ground()
 	_build_terrain()
-	_build_rocks()
-	_build_plants()
+	_build_env()
 	_build_gantry()
 	_build_poles()
 
@@ -230,32 +218,33 @@ func _add_collision(mesh: Mesh) -> void:
 	add_child(body)
 
 
-## Görünmez bariyer duvarları (bariyerlerin hizasında, 1.4 m yüksek)
+## Görünmez bariyer duvarları: bariyer hizasında 1 m kalın, 4 m yüksek kutular (delinmez)
 func _build_walls() -> void:
-	var faces := PackedVector3Array()
-	var n := pos.size()
-	for side in [-1.0, 1.0]:
-		var x: float = side * (HALF + 0.95)
-		for i in n:
-			var k := (i + 1) % n
-			var a: Vector3 = pos[i] + right[i] * x
-			var b: Vector3 = pos[k] + right[k] * x
-			var lo := Vector3(0, -1.0, 0)
-			var hi := Vector3(0, 3.0, 0)
-			faces.append_array([a + lo, b + lo, b + hi, a + lo, b + hi, a + hi])
-	var shape := ConcavePolygonShape3D.new()
-	shape.backface_collision = true
-	shape.set_faces(faces)
 	var body := StaticBody3D.new()
-	body.collision_layer = 1
+	body.collision_layer = 4
 	body.collision_mask = 0
 	var pm := PhysicsMaterial.new()
 	pm.friction = 0.15
 	pm.bounce = 0.1
 	body.physics_material_override = pm
-	var cs := CollisionShape3D.new()
-	cs.shape = shape
-	body.add_child(cs)
+	var n := pos.size()
+	var seg := 2   # 2 örnek = 4 m
+	for side in [-1.0, 1.0]:
+		for i in range(0, n, seg):
+			var k := (i + seg) % n
+			var a: Vector3 = pos[i] + right[i] * side * (HALF + 1.45)
+			var b: Vector3 = pos[k] + right[k] * side * (HALF + 1.45)
+			var mid := (a + b) * 0.5
+			var dir := b - a
+			var length := dir.length() + 0.6
+			var box := BoxShape3D.new()
+			box.size = Vector3(1.0, 9.0, length)
+			var cs := CollisionShape3D.new()
+			cs.shape = box
+			var fwd := dir.normalized()
+			var basis := Basis.looking_at(fwd, Vector3.UP)
+			cs.transform = Transform3D(basis, mid + Vector3(0, 3.5, 0))
+			body.add_child(cs)
 	add_child(body)
 
 
@@ -318,39 +307,9 @@ func _build_ground() -> void:
 	m.uv1_scale = Vector3(0.08, 0.08, 0.08)
 	m.albedo_color = Color(0.95, 0.85, 0.75)
 	g.material_override = m
-	g.position.y = -0.03
+	g.position.y = -60.0   # arazinin altında kalsın (pist yer yer sıfırın altına iniyor)
 	g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(g)
-
-
-func _rock(id: String, p: Vector3, scale: float, yaw: float) -> void:
-	var r: Node3D = load(ROCKS[id]).instantiate()
-	r.position = p
-	r.scale = Vector3.ONE * scale
-	r.rotation.y = yaw
-	add_child(r)
-
-
-func _build_rocks() -> void:
-	# Kanyon tabanına kayalar ve yol kenarı taşları (duvarı arazi oluşturur)
-	var n := pos.size()
-	var i := 0
-	while i < n:
-		for side in [-1.0, 1.0]:
-			if randf() < 0.35:
-				var d: float = HALF + SHOULDER + randf_range(8.0, 16.0)
-				var p: Vector3 = pos[i] + right[i] * side * d
-				if road_distance(p) > HALF + SHOULDER + 6.0:
-					# Yamaçta havada kalmasın: en alçak noktaya göre göm
-					var hmin := minf(minf(height_at(p.x - 3, p.z), height_at(p.x + 3, p.z)), minf(height_at(p.x, p.z - 3), height_at(p.x, p.z + 3)))
-					p.y = hmin - 0.8
-					_rock(["boulder", "boulders"].pick_random(), p, randf_range(2.0, 3.5), randf() * TAU)
-			if randf() < 0.45:
-				var q: Vector3 = pos[i] + right[i] * side * (HALF + SHOULDER + randf_range(1.0, 5.0)) + tan[i] * randf_range(-5, 5)
-				if road_distance(q) > HALF + SHOULDER + 0.5:
-					q.y = height_at(q.x, q.z)
-					_rock(["boulder", "boulders", "stones"].pick_random(), q, randf_range(1.2, 3.0), randf() * TAU)
-		i += randi_range(5, 9)
 
 
 func _build_gantry() -> void:
@@ -476,6 +435,7 @@ func height_at(x: float, z: float) -> float:
 
 
 func _build_terrain() -> void:
+	HCELL = 9.0 if env_quality < 0.5 else 6.0
 	var mn := Vector2(INF, INF)
 	var mx := Vector2(-INF, -INF)
 	for p in pos:
@@ -572,7 +532,10 @@ func _build_terrain() -> void:
 			var h := wall * rise + det.get_noise_2d(wx, wz) * 7.0 * rise
 			h += maxf(de - 80.0, 0.0) * 0.05 * (big.get_noise_2d(wx * 2.0, wz * 2.0) + 0.6)
 			if de < 4.0: h = -0.16 + det.get_noise_2d(wx, wz) * 0.15 * clampf(de, 0, 4) / 4.0
-			_h[k] = h + base
+			# Dış sınırda zemine doğru alçal (kenarda boşluk kalmasın)
+			var edge_d: float = minf(minf(x, _hw - 1 - x), minf(z, _hh - 1 - z)) * HCELL
+			var fall := smoothstep(0.0, 60.0, edge_d)
+			_h[k] = lerpf(-60.0, h + base, fall)
 	# Mesh
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
@@ -613,22 +576,122 @@ func _build_terrain() -> void:
 	mat.set_shader_parameter("sand_tex", _tex("res://assets/real/textures/red_sand/albedo.jpg"))
 	mat.set_shader_parameter("sand_nrm", _tex("res://assets/real/textures/red_sand/normal.jpg"))
 	mat.set_shader_parameter("gravel_tex", _tex("res://assets/real/textures/rocky_terrain_02/albedo.jpg"))
+	mat.set_shader_parameter("hq", env_quality > 0.5)
 	mi.material_override = mat
 	add_child(mi)
 
 
-func _build_plants() -> void:
+# ---------------------------------------------------------------- dekor (kaya ve bitkiler)
+# Sadeleştirilmiş modeller (tools/optimize_env.py) bölge bölge MultiMesh ile çizilir:
+# her bölge ayrı görünürlük mesafesine sahip, uzaktakiler hiç çizilmez.
+
+const CHUNK := 160.0
+var env_quality := 1.0          # 0.4 mobil düşük .. 1.0 yüksek: yerleşim yoğunluğu
+var _env := {}                  # çeşit adı -> {mesh, size}
+var _buckets := {}              # "çeşit|bölge" -> {xf: Array[Transform3D], cfg}
+
+
+func _env_mesh(file: String, mats: Array) -> ArrayMesh:
+	var root: Node = load(file).instantiate()
+	var mesh := ArrayMesh.new()
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var midx := int(String(m.name).substr(1).split("_")[0])
+		for si in m.mesh.get_surface_count():
+			var st := SurfaceTool.new()
+			st.create_from(m.mesh, si)
+			st.generate_tangents()   # normal haritası doğru ışıklansın
+			st.commit(mesh)
+			mesh.surface_set_material(mesh.get_surface_count() - 1, mats[mini(midx, mats.size() - 1)])
+	root.free()
+	return mesh
+
+
+func _load_env() -> void:
+	var man: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/opt/manifest.json"))
+	for name in man:
+		var e: Dictionary = man[name]
+		var mats: Array = []
+		for a in e.alpha:
+			var m := ORMMaterial3D.new()
+			m.albedo_texture = load(e.textures.albedo)
+			if e.textures.has("normal"):
+				m.normal_enabled = true
+				m.normal_texture = load(e.textures.normal)
+			if e.textures.has("arm"): m.orm_texture = load(e.textures.arm)
+			if a != "OPAQUE":
+				m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+				m.alpha_scissor_threshold = 0.5
+				m.cull_mode = BaseMaterial3D.CULL_DISABLED
+			mats.append(m)
+		for v in e.variants:
+			if int(v.tris) > 6000: continue
+			var key := String(v.file).get_file().get_basename()
+			_env[key] = {"mesh": _env_mesh(v.file, mats), "size": v.size, "group": name}
+
+
+func _variants(group: String) -> Array:
+	var out: Array = []
+	for k in _env:
+		if _env[k].group == group: out.append(k)
+	return out
+
+
+func _put(key: String, p: Vector3, scale: float, yaw: float, range_end: float, shadow: bool) -> void:
+	var c := Vector2i(floori(p.x / CHUNK), floori(p.z / CHUNK))
+	var bk := "%s|%d|%d" % [key, c.x, c.y]
+	if not _buckets.has(bk): _buckets[bk] = {"key": key, "xf": [], "range": range_end, "shadow": shadow}
+	_buckets[bk].xf.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale), p))
+
+
+func _flush_env() -> void:
+	for bk in _buckets:
+		var b: Dictionary = _buckets[bk]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = _env[b.key].mesh
+		mm.instance_count = b.xf.size()
+		for i in b.xf.size(): mm.set_instance_transform(i, b.xf[i])
+		var mi := MultiMeshInstance3D.new()
+		mi.multimesh = mm
+		mi.visibility_range_end = b.range
+		mi.visibility_range_end_margin = 20.0
+		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if b.shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mi)
+	_buckets.clear()
+
+
+func _build_env() -> void:
+	_load_env()
 	var n := pos.size()
-	for k in 420:
-		var i := randi() % n
-		var side := -1.0 if randf() < 0.5 else 1.0
-		var d := HALF + SHOULDER + randf_range(1.5, 30.0)
-		var p: Vector3 = pos[i] + right[i] * side * d + tan[i] * randf_range(-4, 4)
-		if road_distance(p) < HALF + SHOULDER + 1.0: continue
-		p.y = height_at(p.x, p.z)
-		var id: String = ["succulent", "succulent", "othonna", "quiver", "branches", "branches"].pick_random()
-		var r: Node3D = load(PLANTS[id]).instantiate()
-		r.position = p
-		r.rotation.y = randf() * TAU
-		r.scale = Vector3.ONE * randf_range(1.2, 2.6) * (2.0 if id == "othonna" else 1.0)
-		add_child(r)
+	var boulders := _variants("namaqualand_boulder_02")
+	var stones := _variants("namaqualand_boulders_01") + _variants("namaqualand_rocks_01")
+	var plants := _variants("cheiridopsis_succulent") + _variants("othonna_cerarioides")
+	var dry := _variants("dry_branches_medium_01") + _variants("dead_quiver_branch_01")
+	var step := int(lerpf(14.0, 5.0, env_quality))
+	for i in range(0, n, step):
+		for side in [-1.0, 1.0]:
+			# Kanyon tabanında büyük kaya blokları (gölgeli)
+			if randf() < 0.3:
+				var d: float = HALF + SHOULDER + randf_range(7.0, 16.0)
+				var p: Vector3 = pos[i] + right[i] * side * d
+				if road_distance(p) > HALF + SHOULDER + 5.0:
+					p.y = minf(minf(height_at(p.x - 3, p.z), height_at(p.x + 3, p.z)), minf(height_at(p.x, p.z - 3), height_at(p.x, p.z + 3))) - 0.6
+					_put(boulders.pick_random(), p, randf_range(1.3, 2.8), randf() * TAU, 380.0, true)
+			# Yol kenarı taşları
+			if randf() < 0.5:
+				var q: Vector3 = pos[i] + right[i] * side * (HALF + SHOULDER + randf_range(1.0, 7.0)) + tan[i] * randf_range(-5, 5)
+				if road_distance(q) > HALF + SHOULDER + 0.5:
+					q.y = height_at(q.x, q.z) - 0.05
+					_put(stones.pick_random(), q, randf_range(2.5, 7.0), randf() * TAU, 160.0, false)
+			# Çalılar ve kuru dallar
+			for k in 2:
+				if randf() < 0.75:
+					var r: Vector3 = pos[i] + right[i] * side * (HALF + SHOULDER + randf_range(1.5, 26.0)) + tan[i] * randf_range(-6, 6)
+					if road_distance(r) > HALF + SHOULDER + 1.0:
+						r.y = height_at(r.x, r.z) - 0.03
+						var is_dry := randf() < 0.3
+						var key: String = (dry if is_dry else plants).pick_random()
+						_put(key, r, randf_range(1.6, 3.2), randf() * TAU, 130.0, false)
+	_flush_env()

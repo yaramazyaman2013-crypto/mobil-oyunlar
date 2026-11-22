@@ -1,0 +1,338 @@
+{
+ "cheiridopsis_succulent": {
+  "category": "plants",
+  "textures": {
+   "albedo": "res://assets/opt/textures/cheiridopsis_succulent_diff_1k.jpg",
+   "normal": "res://assets/opt/textures/cheiridopsis_succulent_nor_gl_1k.jpg",
+   "arm": "res://assets/opt/textures/cheiridopsis_succulent_arm_1k.jpg"
+  },
+  "alpha": [
+   "OPAQUE",
+   "BLEND"
+  ],
+  "variants": [
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__i.glb",
+    "size": [
+     0.511,
+     0.266,
+     0.549
+    ],
+    "tris": 936
+   },
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__h.glb",
+    "size": [
+     0.602,
+     0.238,
+     0.534
+    ],
+    "tris": 944
+   },
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__g.glb",
+    "size": [
+     0.511,
+     0.269,
+     0.422
+    ],
+    "tris": 929
+   },
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__f.glb",
+    "size": [
+     0.451,
+     0.231,
+     0.402
+    ],
+    "tris": 900
+   },
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__e.glb",
+    "size": [
+     0.391,
+     0.228,
+     0.346
+    ],
+    "tris": 946
+   },
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__d.glb",
+    "size": [
+     0.353,
+     0.255,
+     0.35
+    ],
+    "tris": 929
+   },
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__c.glb",
+    "size": [
+     0.238,
+     0.197,
+     0.262
+    ],
+    "tris": 900
+   },
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__b.glb",
+    "size": [
+     0.243,
+     0.167,
+     0.24
+    ],
+    "tris": 900
+   },
+   {
+    "file": "res://assets/opt/cheiridopsis_succulent__a.glb",
+    "size": [
+     0.201,
+     0.185,
+     0.177
+    ],
+    "tris": 900
+   }
+  ]
+ },
+ "dead_quiver_branch_01": {
+  "category": "plants",
+  "textures": {
+   "albedo": "res://assets/opt/textures/dead_quiver_branch_01_diff_1k.jpg",
+   "normal": "res://assets/opt/textures/dead_quiver_branch_01_nor_gl_1k.jpg",
+   "arm": "res://assets/opt/textures/dead_quiver_branch_01_arm_1k.jpg"
+  },
+  "alpha": [
+   "OPAQUE"
+  ],
+  "variants": [
+   {
+    "file": "res://assets/opt/dead_quiver_branch_01__a.glb",
+    "size": [
+     0.255,
+     0.439,
+     0.227
+    ],
+    "tris": 900
+   }
+  ]
+ },
+ "dry_branches_medium_01": {
+  "category": "plants",
+  "textures": {
+   "albedo": "res://assets/opt/textures/dry_branches_medium_01_diff_1k.jpg",
+   "normal": "res://assets/opt/textures/dry_branches_medium_01_nor_gl_1k.jpg",
+   "arm": "res://assets/opt/textures/dry_branches_medium_01_arm_1k.jpg"
+  },
+  "alpha": [
+   "OPAQUE"
+  ],
+  "variants": [
+   {
+    "file": "res://assets/opt/dry_branches_medium_01__a.glb",
+    "size": [
+     0.323,
+     0.341,
+     1.299
+    ],
+    "tris": 915
+   },
+   {
+    "file": "res://assets/opt/dry_branches_medium_01__b.glb",
+    "size": [
+     0.151,
+     0.142,
+     1.039
+    ],
+    "tris": 900
+   },
+   {
+    "file": "res://assets/opt/dry_branches_medium_01__c.glb",
+    "size": [
+     0.131,
+     0.143,
+     0.777
+    ],
+    "tris": 900
+   }
+  ]
+ },
+ "othonna_cerarioides": {
+  "category": "plants",
+  "textures": {
+   "albedo": "res://assets/opt/textures/othonna_cerarioides_diff_1k.jpg",
+   "normal": "res://assets/opt/textures/othonna_cerarioides_nor_gl_1k.jpg",
+   "arm": "res://assets/opt/textures/othonna_cerarioides_arm_1k.jpg"
+  },
+  "alpha": [
+   "OPAQUE",
+   "MASK"
+  ],
+  "variants": [
+   {
+    "file": "res://assets/opt/othonna_cerarioides__g.glb",
+    "size": [
+     0.497,
+     0.463,
+     0.436
+    ],
+    "tris": 933
+   },
+   {
+    "file": "res://assets/opt/othonna_cerarioides__f.glb",
+    "size": [
+     0.392,
+     0.681,
+     0.456
+    ],
+    "tris": 943
+   },
+   {
+    "file": "res://assets/opt/othonna_cerarioides__e.glb",
+    "size": [
+     0.559,
+     0.959,
+     0.46
+    ],
+    "tris": 932
+   },
+   {
+    "file": "res://assets/opt/othonna_cerarioides__d.glb",
+    "size": [
+     0.655,
+     1.152,
+     0.567
+    ],
+    "tris": 1811
+   },
+   {
+    "file": "res://assets/opt/othonna_cerarioides__c.glb",
+    "size": [
+     0.72,
+     1.435,
+     0.947
+    ],
+    "tris": 2341
+   },
+   {
+    "file": "res://assets/opt/othonna_cerarioides__b.glb",
+    "size": [
+     1.008,
+     1.766,
+     1.055
+    ],
+    "tris": 5723
+   },
+   {
+    "file": "res://assets/opt/othonna_cerarioides__a.glb",
+    "size": [
+     1.099,
+     1.97,
+     1.026
+    ],
+    "tris": 11480
+   }
+  ]
+ },
+ "namaqualand_boulder_02": {
+  "category": "rocks",
+  "textures": {
+   "albedo": "res://assets/opt/textures/namaqualand_boulder_02_diff_1k.jpg",
+   "normal": "res://assets/opt/textures/namaqualand_boulder_02_nor_gl_1k.jpg",
+   "arm": "res://assets/opt/textures/namaqualand_boulder_02_arm_1k.jpg"
+  },
+  "alpha": [
+   "OPAQUE"
+  ],
+  "variants": [
+   {
+    "file": "res://assets/opt/namaqualand_boulder_02__boulder_02.glb",
+    "size": [
+     2.532,
+     0.883,
+     1.234
+    ],
+    "tris": 2199
+   }
+  ]
+ },
+ "namaqualand_boulders_01": {
+  "category": "rocks",
+  "textures": {
+   "albedo": "res://assets/opt/textures/namaqualand_boulders_01_diff_1k.jpg",
+   "normal": "res://assets/opt/textures/namaqualand_boulders_01_nor_gl_1k.jpg",
+   "arm": "res://assets/opt/textures/namaqualand_boulders_01_arm_1k.jpg"
+  },
+  "alpha": [
+   "OPAQUE"
+  ],
+  "variants": [
+   {
+    "file": "res://assets/opt/namaqualand_boulders_01__namaqualand_rocks_01_b.glb",
+    "size": [
+     0.339,
+     0.209,
+     0.587
+    ],
+    "tris": 2200
+   },
+   {
+    "file": "res://assets/opt/namaqualand_boulders_01__namaqualand_rocks_01_a.glb",
+    "size": [
+     0.363,
+     0.252,
+     0.551
+    ],
+    "tris": 2200
+   }
+  ]
+ },
+ "namaqualand_rocks_01": {
+  "category": "rocks",
+  "textures": {
+   "albedo": "res://assets/opt/textures/namaqualand_rocks_01_diff_1k.jpg",
+   "normal": "res://assets/opt/textures/namaqualand_rocks_01_nor_gl_1k.jpg",
+   "arm": "res://assets/opt/textures/namaqualand_rocks_01_arm_1k.jpg"
+  },
+  "alpha": [
+   "OPAQUE"
+  ],
+  "variants": [
+   {
+    "file": "res://assets/opt/namaqualand_rocks_01__namaqualand_rocks_02_d.glb",
+    "size": [
+     0.2,
+     0.124,
+     0.157
+    ],
+    "tris": 2199
+   },
+   {
+    "file": "res://assets/opt/namaqualand_rocks_01__namaqualand_rocks_02_c.glb",
+    "size": [
+     0.215,
+     0.085,
+     0.168
+    ],
+    "tris": 2200
+   },
+   {
+    "file": "res://assets/opt/namaqualand_rocks_01__namaqualand_rocks_02_b.glb",
+    "size": [
+     0.22,
+     0.083,
+     0.163
+    ],
+    "tris": 2200
+   },
+   {
+    "file": "res://assets/opt/namaqualand_rocks_01__namaqualand_rocks_02_a.glb",
+    "size": [
+     0.227,
+     0.152,
+     0.217
+    ],
+    "tris": 2199
+   }
+  ]
+ }
+}

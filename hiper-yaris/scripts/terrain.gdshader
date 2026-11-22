@@ -5,6 +5,7 @@ uniform sampler2D rock_nrm : hint_normal, filter_linear_mipmap_anisotropic, repe
 uniform sampler2D sand_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D sand_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D gravel_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform bool hq = true;   // düşük kalitede tek düzlemli örnekleme, normal haritası yok
 
 varying vec3 wpos;
 varying vec3 wnrm;
@@ -28,7 +29,7 @@ float vnoise(vec2 p) {
 
 void fragment() {
 	float slope = 1.0 - wnrm.y;
-	vec3 rock = tri(rock_tex, wpos, wnrm, 0.06);
+	vec3 rock = hq ? tri(rock_tex, wpos, wnrm, 0.06) : texture(rock_tex, vec2(wpos.x + wpos.y, wpos.z - wpos.y) * 0.06).rgb;
 	// Kumtaşı katmanları
 	float strata = sin(wpos.y * 0.9 + vnoise(wpos.xz * 0.02) * 6.0) * 0.5 + 0.5;
 	vec3 tint = mix(vec3(1.05, 0.72, 0.52), vec3(0.85, 0.5, 0.36), strata);
@@ -39,7 +40,9 @@ void fragment() {
 	vec3 flat_col = mix(sand, gravel, gmix * 0.6);
 	float r = smoothstep(0.22, 0.45, slope + (vnoise(wpos.xz * 0.15) - 0.5) * 0.15);
 	ALBEDO = mix(flat_col, rock, r);
-	vec3 nm = mix(texture(sand_nrm, wpos.xz * 0.12).rgb, tri(rock_nrm, wpos, wnrm, 0.06), r);
-	NORMAL_MAP = nm;
+	if (hq) {
+		vec3 nm = mix(texture(sand_nrm, wpos.xz * 0.12).rgb, tri(rock_nrm, wpos, wnrm, 0.06), r);
+		NORMAL_MAP = nm;
+	}
 	ROUGHNESS = mix(0.95, 0.85, r);
 }

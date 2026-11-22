@@ -23,31 +23,53 @@ const MODELS := {
 	"sport_a": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_4"], "wheels": "mc-wheel*", "paint": false},
 	"sport_b": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_001_9"], "wheels": "mc-wheel*", "paint": false},
 	"sport_c": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_002_14"], "wheels": "mc-wheel*", "paint": false},
+	"furia_a": {"path": "res://assets/real/cars/sport2.glb", "yaw": 0.0, "keep": ["glr-body_4"], "wheels": "glr-wheel*", "paint": false},
+	"furia_b": {"path": "res://assets/real/cars/sport2.glb", "yaw": 0.0, "keep": ["glr-body_001_9"], "wheels": "glr-wheel*", "paint": false},
+	"furia_c": {"path": "res://assets/real/cars/sport2.glb", "yaw": 0.0, "keep": ["glr-body_002_14"], "wheels": "glr-wheel*", "paint": false},
+	"saba": {"path": "res://assets/real/cars/saba.glb", "yaw": -PI / 2.0, "keep": [], "wheels": "*WheelStock_*", "paint": false},
+	"cheetah": {"path": "res://assets/real/cars/cheetah.glb", "yaw": -PI / 2.0, "keep": [], "wheels": "*WheelStock_*", "paint": false},
+	"exterminator": {"path": "res://assets/real/cars/exterminator.glb", "yaw": -PI / 2.0, "keep": [], "wheels": "*WheelsStock_*", "paint": false},
 }
 const GARAGE := [
 	{"name": "AURORA  •  BUZ MAVİSİ", "model": "concept", "color": Color(0.05, 0.3, 0.85), "price": 0},
-	{"name": "STRADA GT  •  TURUNCU", "model": "sport_b", "color": Color.WHITE, "price": 200},
-	{"name": "GOBLIN V12  •  ZEHİR YEŞİLİ", "model": "goblin", "color": Color(0.2, 0.7, 0.05), "price": 350},
-	{"name": "STRADA GT  •  KARBON", "model": "sport_a", "color": Color.WHITE, "price": 700},
-	{"name": "AURORA  •  YARIŞ KIRMIZISI", "model": "concept", "color": Color(0.75, 0.04, 0.04), "price": 900},
-	{"name": "GOBLIN V12  •  GECE SİYAHI", "model": "goblin", "color": Color(0.025, 0.025, 0.03), "price": 1100},
-	{"name": "STRADA GT  •  BEYAZ", "model": "sport_c", "color": Color.WHITE, "price": 1300},
+	{"name": "CHEETAH '84  •  KIRMIZI", "model": "cheetah", "color": Color.WHITE, "price": 150},
+	{"name": "STRADA GT  •  TURUNCU", "model": "sport_b", "color": Color.WHITE, "price": 250},
+	{"name": "EXTERMINATOR  •  TUNING", "model": "exterminator", "color": Color.WHITE, "price": 350},
+	{"name": "FURIA GT  •  YEŞİL", "model": "furia_a", "color": Color.WHITE, "price": 450},
+	{"name": "GOBLIN V12  •  ZEHİR YEŞİLİ", "model": "goblin", "color": Color(0.2, 0.7, 0.05), "price": 600},
+	{"name": "SABA V12  •  SARI", "model": "saba", "color": Color.WHITE, "price": 750},
+	{"name": "STRADA GT  •  KARBON", "model": "sport_a", "color": Color.WHITE, "price": 900},
+	{"name": "FURIA GT  •  BEYAZ", "model": "furia_b", "color": Color.WHITE, "price": 1050},
+	{"name": "AURORA  •  YARIŞ KIRMIZISI", "model": "concept", "color": Color(0.75, 0.04, 0.04), "price": 1200},
+	{"name": "GOBLIN V12  •  GECE SİYAHI", "model": "goblin", "color": Color(0.025, 0.025, 0.03), "price": 1400},
+	{"name": "FURIA GT  •  SARI", "model": "furia_c", "color": Color.WHITE, "price": 1600},
 ]
 const RIVALS := [
 	{"name": "KARTAL", "model": "goblin", "color": Color(0.03, 0.03, 0.035)},
 	{"name": "ŞAHİN", "model": "sport_c", "color": Color.WHITE},
-	{"name": "KURT", "model": "concept", "color": Color(0.85, 0.85, 0.83)},
+	{"name": "KURT", "model": "saba", "color": Color.WHITE},
 	{"name": "TİLKİ", "model": "concept", "color": Color(0.6, 0.05, 0.08)},
 	{"name": "ŞİMŞEK", "model": "sport_b", "color": Color.WHITE},
 	{"name": "BORA", "model": "goblin", "color": Color(0.9, 0.5, 0.02)},
+	{"name": "POYRAZ", "model": "cheetah", "color": Color.WHITE},
+	{"name": "ATMACA", "model": "exterminator", "color": Color.WHITE},
+	{"name": "PARS", "model": "furia_a", "color": Color.WHITE},
+	{"name": "VAŞAK", "model": "furia_b", "color": Color.WHITE},
+	{"name": "KAPLAN", "model": "concept", "color": Color(0.85, 0.85, 0.83)},
+	{"name": "YILDIRIM", "model": "furia_c", "color": Color.WHITE},
 ]
-const PRIZES := [300, 180, 100, 50]
+const CAR_COUNT := 10
+const PRIZES := [400, 280, 200, 150, 110, 80, 60, 40, 30, 20]
 const UPGRADE_COST := [200, 400, 700, 1100, 1600]
 
 var state := State.MENU
 var track: Track
 var model_scenes := {}
 var car_seq := 0
+var quality := 2
+var world_env: Environment
+var sun: DirectionalLight3D
+var quality_button: Button
 var cars: Array = []
 var player: Dictionary
 var camera: Camera3D
@@ -70,7 +92,7 @@ var autopilot := false   # test botu için
 var debug_log := false
 
 # Kayıt
-var save := {"level": 1, "coins": 0, "paints": [0], "paint": 0, "motor": 0, "nitro": 0}
+var save := {"level": 1, "coins": 0, "paints": [0], "paint": 0, "motor": 0, "nitro": 0, "quality": -1}
 var paint_index := 0
 
 # Arayüz
@@ -100,6 +122,7 @@ func _ready() -> void:
 	randomize()
 	_load_save()
 	paint_index = int(save.paint)
+	quality = int(save.quality) if int(save.quality) >= 0 else (0 if OS.has_feature("mobile") else 2)
 	touch_mode = DisplayServer.is_touchscreen_available()
 	for k in MODELS: model_scenes[k] = load(MODELS[k].path)
 	for s in ["coin", "click", "nitro", "beep", "go"]:
@@ -167,11 +190,12 @@ func _build_world() -> void:
 	env.adjustment_enabled = true
 	env.adjustment_saturation = 1.12
 	env.adjustment_contrast = 1.05
+	world_env = env
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
 
-	var sun := DirectionalLight3D.new()
+	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-38, -135, 0)
 	sun.light_energy = 2.2
 	sun.light_color = Color(1.0, 0.93, 0.82)
@@ -181,16 +205,53 @@ func _build_world() -> void:
 	sun.shadow_blur = 1.5
 	add_child(sun)
 
-	track = Track.new()
-	add_child(track)
-	track.build(TRACK_POINTS, 1234)
-	randomize()
+	_build_track()
 
 	camera = Camera3D.new()
 	camera.fov = 68
 	camera.far = 1500
 	camera.near = 0.1
 	add_child(camera)
+	_apply_quality()
+
+
+func _build_track() -> void:
+	if track: track.queue_free()
+	track = Track.new()
+	track.env_quality = [0.35, 0.65, 1.0][quality]
+	add_child(track)
+	track.build(TRACK_POINTS, 1234)
+	randomize()
+
+
+## Grafik kalitesi: 0 düşük (telefon), 1 orta, 2 yüksek (PC)
+func _apply_quality() -> void:
+	var q := quality
+	var vp := get_viewport()
+	vp.scaling_3d_scale = [0.7, 0.85, 1.0][q]
+	vp.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_DISABLED, Viewport.MSAA_2X][q]
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+	world_env.ssao_enabled = q == 2
+	world_env.glow_enabled = q >= 1
+	world_env.fog_enabled = true
+	world_env.sky.radiance_size = [Sky.RADIANCE_SIZE_64, Sky.RADIANCE_SIZE_128, Sky.RADIANCE_SIZE_256][q]
+	sun.shadow_enabled = true
+	sun.directional_shadow_mode = [DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS][q]
+	sun.directional_shadow_max_distance = [60.0, 120.0, 220.0][q]
+	RenderingServer.directional_shadow_atlas_set_size([2048, 2048, 4096][q], true)
+	RenderingServer.directional_soft_shadow_filter_set_quality([RenderingServer.SHADOW_QUALITY_HARD, RenderingServer.SHADOW_QUALITY_SOFT_LOW, RenderingServer.SHADOW_QUALITY_SOFT_HIGH][q])
+	Engine.physics_ticks_per_second = [60, 90, 120][q]
+	Engine.max_physics_steps_per_frame = 8
+	camera.far = [700.0, 1000.0, 1500.0][q] if camera else 1500.0
+
+
+func _cycle_quality() -> void:
+	quality = (quality + 2) % 3   # yüksek -> orta -> düşük -> yüksek
+	save.quality = quality
+	_write_save()
+	_build_track()
+	_apply_quality()
+	_go_menu()
 
 
 # ---------------------------------------------------------------- araçlar
@@ -311,7 +372,10 @@ func _fix_glass(model: Node3D) -> void:
 			var m := m3.get_active_material(i)
 			if m == null: continue
 			var n := m.resource_name.to_lower()
-			if (n == "glass" or n == "car_glass" or n.begins_with("glass ")) and not n.contains("red"):
+			var skip := false
+			for w in ["light", "red", "lamp", "head", "tail", "brake", "blink", "reverse"]:
+				if n.contains(w): skip = true
+			if n.contains("glass") and not skip:
 				var g := StandardMaterial3D.new()
 				g.albedo_color = Color(0.03, 0.04, 0.05, 0.75)
 				g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -325,10 +389,15 @@ func _rig_wheels(body: Node3D, model: Node3D, pattern: String) -> Array:
 	var out: Array = []
 	var inv_body := body.global_transform.affine_inverse()
 	if pattern != "":
-		for w in model.find_children(pattern, "Node3D", true, false):
+		var found: Array = model.find_children(pattern, "Node3D", true, false)
+		var tops: Array = []
+		for w in found:
+			var nested := false
+			for o in found:
+				if o != w and o.is_ancestor_of(w): nested = true
+			if not nested: tops.append(w)
+		for w in tops:
 			var node := w as Node3D
-			var pn := String(node.get_parent().name)
-			if pn.begins_with("bone_rotation") or pn.begins_with("mc-wheel") or pn.begins_with("Wheel"): continue
 			var meshes: Array = node.find_children("*", "MeshInstance3D", true, false)
 			if node is MeshInstance3D: meshes.append(node)
 			if meshes.is_empty() or not (meshes[0] as MeshInstance3D).is_visible_in_tree(): continue
@@ -350,9 +419,9 @@ func _rig_wheels(body: Node3D, model: Node3D, pattern: String) -> Array:
 			var to_parent: Basis = parent.global_basis.inverse() * body.global_basis
 			var inv: Basis = parent.global_basis.orthonormalized().inverse()
 			var rb: Basis = body.global_basis.orthonormalized()
-			var radius := clampf(c_body.y, 0.28, 0.5)
+			var radius := clampf(c_body.y, 0.26, 0.6)
 			out.append({
-				"mount": Vector3(c_body.x, c_body.y + 0.25, c_body.z), "radius": radius, "front": c_body.z > 0.0,
+				"mount": Vector3(c_body.x, c_body.y + 0.33, c_body.z), "radius": radius, "front": c_body.z > 0.0,
 				"pivot": pivot, "base_pos": pivot.position, "base_center": c_body, "to_parent": to_parent,
 				"base_basis": pivot.basis, "axle": (inv * (rb * Vector3.RIGHT)).normalized(), "up": (inv * (rb * Vector3.UP)).normalized(),
 				"spin": 0.0, "contact": false, "comp": 0.0,
@@ -362,7 +431,7 @@ func _rig_wheels(body: Node3D, model: Node3D, pattern: String) -> Array:
 		out.clear()
 		for z in [1.38, -1.38]:
 			for x in [0.82, -0.82]:
-				out.append({"mount": Vector3(x, 0.6, z), "radius": 0.35, "front": z > 0.0, "pivot": null,
+				out.append({"mount": Vector3(x, 0.68, z), "radius": 0.35, "front": z > 0.0, "pivot": null,
 					"base_pos": Vector3.ZERO, "base_center": Vector3(x, 0.35, z), "to_parent": Basis(),
 					"base_basis": Basis(), "axle": Vector3.RIGHT, "up": Vector3.UP, "spin": 0.0, "contact": false, "comp": 0.0})
 	return out
@@ -372,15 +441,15 @@ func _make_flame() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.emitting = false
 	p.amount = 40
-	p.lifetime = 0.18
+	p.lifetime = 0.12
 	p.local_coords = true
 	p.direction = Vector3(0, 0, -1)
 	p.spread = 6.0
 	p.initial_velocity_min = 9.0
 	p.initial_velocity_max = 14.0
 	p.gravity = Vector3.ZERO
-	p.scale_amount_min = 0.25
-	p.scale_amount_max = 0.45
+	p.scale_amount_min = 0.12
+	p.scale_amount_max = 0.24
 	var q := SphereMesh.new()
 	q.radius = 0.5
 	q.height = 1.0
@@ -394,8 +463,8 @@ func _make_flame() -> CPUParticles3D:
 	q.material = m
 	p.mesh = q
 	var g := Gradient.new()
-	g.set_color(0, Color(1.6, 1.8, 3.0, 1.0))
-	g.set_color(1, Color(0.1, 0.3, 1.5, 0.0))
+	g.set_color(0, Color(0.55, 0.8, 1.6, 0.9))
+	g.set_color(1, Color(0.05, 0.15, 0.9, 0.0))
 	p.color_ramp = g
 	return p
 
@@ -526,14 +595,15 @@ func _contacts(delta: float) -> void:
 		Input.vibrate_handheld(int(clampf(rel * 10.0, 40, 200)))
 		# Takedown: hızlı ve sert vuruş rakibi savurur
 		if rel > 9.0 and not c.finished:
-			b.apply_central_impulse(d.normalized() * b.mass * 4.0 + Vector3.UP * b.mass * 1.5)
-			b.apply_torque_impulse(Vector3.UP * b.mass * 6.0 * (1.0 if randf() < 0.5 else -1.0))
+			var push := Vector3(d.x, 0.0, d.z).normalized()
+			b.apply_central_impulse(push * b.mass * 2.5)
+			b.apply_torque_impulse(Vector3.UP * b.mass * 4.0 * (1.0 if randf() < 0.5 else -1.0))
 			player.nitro = minf(player.nitro + 0.35, 1.0)
 			_popup("TAKEDOWN!  +NİTRO", Color(1.0, 0.4, 0.25))
 
 
 func _recover(car: Dictionary) -> void:
-	if debug_log: print("  KURTARMA ", car.name, " s=", int(fposmod(car.s, track.length)), " x=", snappedf(car.x, 0.1), " flip=", snappedf(car.flip, 0.1), " stuck=", snappedf(car.stuck, 0.1), " wrong=", snappedf(car.wrong, 0.1))
+	if debug_log: print("  KURTARMA ", car.name, " model=", car.model_id, " yükseklik=", snappedf(car.body.global_position.y - track.point(car.s).y, 0.1), " hız=", int(car.body.speed * 3.6), " zemin=", car.body.on_ground, " s=", int(fposmod(car.s, track.length)), " x=", snappedf(car.x, 0.1), " flip=", snappedf(car.flip, 0.1), " stuck=", snappedf(car.stuck, 0.1), " wrong=", snappedf(car.wrong, 0.1))
 	var s: float = car.s
 	var x: float = clampf(car.x, -Track.HALF + 2.5, Track.HALF - 2.5)
 	car.body.place(track.point(s, x), track.tangent(s), clampf(car.body.speed, 15.0, 30.0))
@@ -628,18 +698,18 @@ func _setup_grid() -> void:
 	var diff := clampf((level - 1) / 10.0, 0.0, 1.0)
 	var rivals := RIVALS.duplicate()
 	rivals.shuffle()
-	for i in 4:
+	for i in CAR_COUNT:
 		var row := i / 2
 		var lane: float = -2.6 if i % 2 == 0 else 2.6
 		var s := -12.0 - row * 10.0 - (5.0 if i % 2 else 0.0)
-		if i == 3:
+		if i == CAR_COUNT - 1:
 			var g: Dictionary = GARAGE[paint_index]
 			player = _make_car(g.model, g.color, true, s, lane, {"tune": {"power_kw": 300.0 + 22.0 * int(save.motor)}})
 			cars.append(player)
 		else:
 			var r: Dictionary = rivals[i]
 			cars.append(_make_car(r.model, r.color, false, s, lane, {
-				"name": r.name, "top": lerpf(62.0, 82.0, diff) + (2 - i) * 1.2 + randf_range(-1.0, 1.0),
+				"name": r.name, "top": lerpf(62.0, 82.0, diff) + (4 - i) * 0.6 + randf_range(-1.0, 1.0),
 				"skill": lerpf(0.8, 1.0, diff) + randf_range(-0.03, 0.03),
 				"tune": {"power_kw": lerpf(280.0, 340.0, diff)},
 			}))
@@ -684,12 +754,14 @@ func _finish_player() -> void:
 	var place: int = finish_order.find(player) + 1
 	var prize: int = PRIZES[place - 1]
 	save.coins = int(save.coins) + prize
-	if place == 1: save.level = int(save.level) + 1
+	if place <= 3: save.level = int(save.level) + 1
 	_write_save()
-	over_place.text = ["1.", "2.", "3.", "4."][place - 1]
-	over_place.add_theme_color_override("font_color", [Color(1, 0.82, 0.2), Color(0.85, 0.88, 0.95), Color(0.9, 0.6, 0.35), Color(0.8, 0.8, 0.8)][place - 1])
-	over_info.text = "%s\nSÜRE  %s\n+%d COIN" % [["ZAFER!", "İKİNCİ", "ÜÇÜNCÜ", "SONUNCU"][place - 1], _fmt_time(race_time), prize]
-	next_button.text = "SONRAKİ YARIŞ" if place == 1 else "TEKRAR DENE"
+	over_place.text = "%d." % place
+	var cols := [Color(1, 0.82, 0.2), Color(0.85, 0.88, 0.95), Color(0.9, 0.6, 0.35)]
+	over_place.add_theme_color_override("font_color", cols[place - 1] if place <= 3 else Color(0.8, 0.8, 0.8))
+	var titles := ["ZAFER!", "İKİNCİ", "ÜÇÜNCÜ"]
+	over_info.text = "%s\nSÜRE  %s\n+%d COIN" % [titles[place - 1] if place <= 3 else "%d. SIRA" % place, _fmt_time(race_time), prize]
+	next_button.text = "SONRAKİ YARIŞ" if place <= 3 else "TEKRAR DENE"
 	controls.visible = false
 	hud.visible = false
 	await get_tree().create_timer(1.5).timeout
@@ -1037,7 +1109,7 @@ func _build_ui() -> void:
 	menu.add_child(shade)
 	var title := _label("HİPER YARIŞ", 92, menu, Color(1.0, 0.6, 0.1))
 	_box(title, 0.5, 0, 0, 70, 1000, 110)
-	var sub := _label("KANYON  •  4 ARAÇ  •  2 TUR", 26, menu, Color(1, 1, 1, 0.9))
+	var sub := _label("KANYON  •  10 ARAÇ  •  2 TUR", 26, menu, Color(1, 1, 1, 0.9))
 	_box(sub, 0.5, 0, 0, 128, 800, 36)
 	coin_label = _label("", 30, menu, Color(1, 0.85, 0.3), HORIZONTAL_ALIGNMENT_RIGHT)
 	_box(coin_label, 1, 0, -170, 40, 300, 40)
@@ -1055,7 +1127,10 @@ func _build_ui() -> void:
 	nitro_button = _button("", menu, _upgrade.bind("nitro"))
 	nitro_button.add_theme_font_size_override("font_size", 22)
 	_box(nitro_button, 0, 0, 180, 290, 300, 64)
-	var credit := _label("Araç: CarConcept © Eric Chadwick/DGG (CC BY 4.0) · Çevre: Poly Haven (CC0) · Ses: Kenney (CC0)", 14, menu, Color(1, 1, 1, 0.55))
+	quality_button = _button("", menu, _cycle_quality)
+	quality_button.add_theme_font_size_override("font_size", 20)
+	_box(quality_button, 0, 0, 180, 365, 300, 56)
+	var credit := _label("Araçlar: Eric Chadwick/DGG, ollitei, Han66st, Daniel Zhabotinsky (CC BY 4.0) · Çevre: Poly Haven (CC0) · Ses: Kenney (CC0) · Fizik: Godot Jolt", 14, menu, Color(1, 1, 1, 0.55))
 	_box(credit, 0.5, 1, 0, -14, 1200, 22)
 
 	# --- Yarış sonu
@@ -1096,7 +1171,7 @@ func _zone(parent: Control, text: String, ax: float, ay: float, ox: float, oy: f
 func _update_hud() -> void:
 	if not hud.visible: return
 	var ranks := _ranks()
-	pos_label.text = "%d/4" % ranks[player.id]
+	pos_label.text = "%d/%d" % [ranks[player.id], cars.size()]
 	var prog: float = clampf(player.s / (LAPS * track.length), 0.0, 1.0)
 	prog_label.text = "%d %%" % int(prog * 100.0)
 	lap_label.text = "TUR %d/%d" % [clampi(int(player.s / track.length) + 1, 1, LAPS), LAPS]
@@ -1111,10 +1186,21 @@ func _update_hud() -> void:
 			c.tag.text = "%d.  %s" % [r, c.name]
 			c.tag.modulate = Color(1, 0.85, 0.3) if r == 1 else Color.WHITE
 			var ahead: float = c.s - player.s
-			c.tag.visible = ahead > 6.0 and ahead < 140.0
+			c.tag.visible = ahead > 6.0 and ahead < 90.0 and _ahead_rank(c) < 3
 	for name in zones:
 		var z: Control = zones[name]
 		z.modulate.a = 1.0 if _pressed(name) else 0.7
+
+
+## Oyuncunun önündeki araçlar arasında bu aracın sırası (0 = en yakın)
+func _ahead_rank(car: Dictionary) -> int:
+	var d: float = car.s - player.s
+	var r := 0
+	for o in cars:
+		if o == car or o == player: continue
+		var od: float = o.s - player.s
+		if od > 6.0 and od < d: r += 1
+	return r
 
 
 func _paint_step(d: int) -> void:
@@ -1158,6 +1244,7 @@ func _refresh_menu() -> void:
 	buy_button.text = "YARIŞ!" if owned else "SATIN AL"
 	buy_button.disabled = not owned and int(save.coins) < int(p.price)
 	coin_label.text = "● %d    YARIŞ %d" % [save.coins, save.level]
+	quality_button.text = "GRAFİK: %s" % ["DÜŞÜK", "ORTA", "YÜKSEK"][quality]
 	for pair in [[motor_button, "motor", "MOTOR"], [nitro_button, "nitro", "NİTRO"]]:
 		var lvl: int = int(save[pair[1]])
 		var b: Button = pair[0]

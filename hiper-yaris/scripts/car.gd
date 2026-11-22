@@ -42,7 +42,7 @@ var air_time := 0.0
 func setup(wheel_specs: Array, mass_kg: float) -> void:
 	mass = mass_kg
 	center_of_mass_mode = RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
-	center_of_mass = Vector3(0, 0.42, 0.05)
+	center_of_mass = Vector3(0, 0.3, 0.05)
 	# Godot'nun varsayılan sönümlemesini kapat (yoksa 0.1·m·v'lik görünmez fren olur)
 	linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
 	linear_damp = 0.0
@@ -51,7 +51,7 @@ func setup(wheel_specs: Array, mass_kg: float) -> void:
 	can_sleep = false
 	continuous_cd = true
 	collision_layer = 2
-	collision_mask = 1 | 2
+	collision_mask = 1 | 2 | 4     # 1 yol/zemin, 2 araçlar, 4 bariyer duvarları
 	var pm := PhysicsMaterial.new()
 	pm.friction = 0.25
 	pm.bounce = 0.15
@@ -102,12 +102,14 @@ func _physics_process(delta: float) -> void:
 		if w.contact:
 			dist = origin.distance_to(hit.position)
 			on_ground += 1
-			var comp: float = length - dist
+			var comp: float = minf(length - dist, rest + droop)
 			var p: Vector3 = hit.position
 			var r := p - global_position
 			var vel_at := v + angular_velocity.cross(r)
 			var fz := spring * comp - damper * vel_at.dot(up)
-			fz = clampf(fz, 0.0, 30000.0)
+			# Tampon: süspansiyon sonuna gelince sert durdur (tekerlek gövdeye girmesin)
+			if comp > rest + droop - 0.08: fz += (comp - (rest + droop - 0.08)) * spring * 6.0
+			fz = clampf(fz, 0.0, 40000.0)
 			load_sum += fz
 			apply_force(up * fz, r)
 			# Tekerlek yönleri (ön tekerlekler direksiyonla döner)
@@ -147,6 +149,9 @@ func _physics_process(delta: float) -> void:
 		w.comp = length - dist
 		_update_wheel_visual(w, dist)
 
+	# Arcade: çarpışmalarda araçlar havaya fırlamasın
+	if linear_velocity.y > 5.0:
+		linear_velocity.y = 5.0
 	# Aerodinamik
 	apply_central_force(-v * v.length() * drag)
 	if on_ground > 0:
@@ -176,6 +181,11 @@ func _physics_process(delta: float) -> void:
 			linear_velocity -= lat_v2 * clampf(delta * 2.2, 0.0, 1.0)
 			linear_velocity += fwd * signf(speed) * lat_v2.length() * clampf(delta * 1.8, 0.0, 1.0)
 			apply_torque(up * -yaw_rate * mass * 2.0)
+	# Devrilme önleyici: yerdeyken yan yatma 20°'yi geçerse doğrult
+	if on_ground >= 1:
+		var tilt := up.cross(Vector3.UP)
+		if tilt.length() > 0.34:
+			apply_torque(tilt * mass * 18.0 - angular_velocity.project(fwd) * mass * 1.5)
 	# Havadayken düz kal
 	if on_ground == 0:
 		air_time += delta
@@ -189,6 +199,8 @@ func _update_wheel_visual(w: Dictionary, dist: float) -> void:
 	if w.pivot == null: return
 	# Tekerlek merkezinin araç uzayındaki yüksekliği
 	var center_y: float = w.mount.y - (dist - w.radius)
+	# Görsel tekerlek hareketini gerçekçi süspansiyon aralığında tut
+	center_y = clampf(center_y, w.base_center.y - 0.16, w.base_center.y + 0.1)
 	var delta_car := Vector3(0, center_y - w.base_center.y, 0)
 	var pv: Node3D = w.pivot
 	pv.position = w.base_pos + w.to_parent * delta_car
@@ -200,7 +212,7 @@ func _update_wheel_visual(w: Dictionary, dist: float) -> void:
 func place(pos: Vector3, forward: Vector3, keep_speed: float) -> void:
 	var t := Transform3D()
 	t.basis = Basis.looking_at(-forward, Vector3.UP)   # +Z ileri olacak şekilde
-	t.origin = pos + Vector3.UP * 0.1
+	t.origin = pos + Vector3.UP * 0.05
 	global_transform = t
 	linear_velocity = forward * keep_speed
 	angular_velocity = Vector3.ZERO

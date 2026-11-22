@@ -3,6 +3,7 @@
 import json, os, urllib.request
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "assets", "real")
+SRC_ROOT = os.path.join(os.path.dirname(__file__), "..", "assets_src", "real")
 API = "https://api.polyhaven.com/files/"
 MODELS = ["namaqualand_boulder_02", "namaqualand_boulders_01", "namaqualand_rocks_01"]
 PLANTS = ["othonna_cerarioides", "cheiridopsis_succulent", "dead_quiver_branch_01", "dry_branches_medium_01"]
@@ -25,14 +26,14 @@ def files(asset):
 
 for m in MODELS:
     g = files(m)["gltf"][RES_MODEL]["gltf"]
-    d = os.path.join(ROOT, "rocks", m)
+    d = os.path.join(SRC_ROOT, "rocks", m)
     get(g["url"], os.path.join(d, m + ".gltf"))
     for rel, info in g.get("include", {}).items():
         get(info["url"], os.path.join(d, rel))
 
 for m in PLANTS:
     g = files(m)["gltf"][RES_MODEL]["gltf"]
-    d = os.path.join(ROOT, "plants", m)
+    d = os.path.join(SRC_ROOT, "plants", m)
     get(g["url"], os.path.join(d, m + ".gltf"))
     for rel, info in g.get("include", {}).items():
         get(info["url"], os.path.join(d, rel))
@@ -48,6 +49,9 @@ for t, maps in TEXTURES.items():
 get(files(HDRI)["hdri"]["1k"]["hdr"]["url"], os.path.join(ROOT, "sky", HDRI + ".hdr"))
 # Sketchfab araçları (API anahtarı gerekir; ortamın proxy'si ekler):
 #   V12 Goblin 0a20e49ad5774d778567cb5c3f345786,
-#   Generic Sport Car 7ad3bfb2bd7449c19698fc7d0592a601  ->  /v3/models/<uid>/download (glb)
+#   Generic Sport Car 7ad3bfb2bd7449c19698fc7d0592a601, Sport Car 5d1253a7eddc4c52a57805c515738902,
+#   Saba V12 3ab977050c334c13b6abb5de078b4957, Cheetah 84 c967ab4abbc54ae4b7933fd81a86c99c,
+#   Exterminator 00 857f048c4bbb40b4be4fb0b765a52116  ->  /v3/models/<uid>/download (glb)
+# Kaya/bitki kaynakları assets_src/ altına iner; sonra: python3 tools/optimize_env.py
 get("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/CarConcept/glTF-Binary/CarConcept.glb",
     os.path.join(ROOT, "cars", "CarConcept.glb"))
