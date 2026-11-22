@@ -308,9 +308,13 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 		f.position = Vector3(x, 0.45, -2.25)
 		body.add_child(f)
 		flames.append(f)
-	var smoke := _make_smoke()
-	smoke.position = Vector3(0, 0.3, -1.5)
-	body.add_child(smoke)
+	var smoke: Array = []
+	for w in wheels:
+		if w.front: continue
+		var sm := _make_smoke()
+		sm.position = Vector3(w.mount.x, 0.4, w.mount.z - 0.2)
+		body.add_child(sm)
+		smoke.append(sm)
 	var sparks := _make_sparks()
 	add_child(sparks)
 	var debris := _make_debris(color)
@@ -473,7 +477,8 @@ func _merge_body(model: Node3D, pattern: String, cache_key: String) -> void:
 	merged.mesh = mesh
 	merged.name = "MergedBody"
 	model.add_child(merged)
-	for m in parts: m.queue_free()
+	# Düğümleri silme: bazı modellerde tekerlekler gövde parçasının alt düğümü (ör. Aurora)
+	for m in parts: m.mesh = null
 
 
 ## Tekerlek görsellerini bulur, merkezlerinde pivot oluşturur ve fizik bağlantı noktalarını hesaplar.
@@ -561,42 +566,63 @@ func _make_flame() -> CPUParticles3D:
 	return p
 
 
+## Gerçekçi lastik dumanı: yumuşak, genişleyerek yükselen, dönerek dağılan bulutlar
 func _make_smoke() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.emitting = false
-	p.amount = 50
-	p.lifetime = 1.2
-	p.local_coords = false
-	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	p.emission_box_extents = Vector3(0.9, 0.05, 0.2)
-	p.direction = Vector3(0, 1, 0)
-	p.spread = 40.0
-	p.initial_velocity_min = 0.5
-	p.initial_velocity_max = 2.0
-	p.gravity = Vector3(0, 0.4, 0)
-	p.scale_amount_min = 1.2
-	p.scale_amount_max = 2.6
+	p.amount = [20, 36, 52][quality]
+	p.lifetime = 1.0
+	# Arabanın çerçevesinde: duman arabayla gelip arkasında iz olarak yayılır (hızda ekranda kalır)
+	p.local_coords = true
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	p.emission_sphere_radius = 0.3
+	p.direction = Vector3(0, 0.25, -1)
+	p.spread = 28.0
+	p.initial_velocity_min = 1.5
+	p.initial_velocity_max = 3.5
+	p.gravity = Vector3(0, 0.8, 0)
+	p.damping_min = 2.0
+	p.damping_max = 3.0
+	p.angle_min = 0.0
+	p.angle_max = 360.0
+	p.angular_velocity_min = -50.0
+	p.angular_velocity_max = 50.0
+	p.scale_amount_min = 0.7
+	p.scale_amount_max = 1.1
 	var curve := Curve.new()
-	curve.add_point(Vector2(0, 0.3))
-	curve.add_point(Vector2(1, 1.5))
+	curve.add_point(Vector2(0.0, 0.35))
+	curve.add_point(Vector2(0.4, 1.1))
+	curve.add_point(Vector2(1.0, 1.9))
 	p.scale_amount_curve = curve
 	var q := QuadMesh.new()
+	q.size = Vector2(1.7, 1.7)
 	var m := StandardMaterial3D.new()
-	m.albedo_texture = load("res://assets/sprites/smoke.png")
+	m.albedo_texture = load("res://assets/sprites/smoke_soft.png")
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.billboard_keep_scale = true
 	m.vertex_color_use_as_albedo = true
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.proximity_fade_enabled = true       # zemine sert kesişmesin
+	m.proximity_fade_distance = 0.3
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Kameraya yaklaşan duman saydamlaşsın: görüşü asla kapatmasın
+	m.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+	m.distance_fade_min_distance = 2.5
+	m.distance_fade_max_distance = 5.5
 	q.material = m
 	p.mesh = q
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var g := Gradient.new()
-	g.set_color(0, Color(0.85, 0.8, 0.75, 0.55))
-	g.set_color(1, Color(0.85, 0.8, 0.75, 0.0))
+	g.offsets = PackedFloat32Array([0.0, 0.12, 0.55, 1.0])
+	g.colors = PackedColorArray([Color(0.88, 0.86, 0.84, 0.0), Color(0.88, 0.86, 0.84, 0.5), Color(0.82, 0.8, 0.78, 0.26), Color(0.8, 0.78, 0.76, 0.0)])
 	p.color_ramp = g
 	return p
 
 
-## Kaza enkazı: savrulan kaporta/cam parçaları
+func _set_smoke(car: Dictionary, on: bool) -> void:
+	for sm in car.smoke: sm.emitting = on
+
 func _make_debris(color: Color) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.emitting = false
@@ -674,7 +700,7 @@ func _track_sync(car: Dictionary) -> void:
 func _drive(car: Dictionary, delta: float) -> void:
 	var body: Car = car.body
 	_track_sync(car)
-	var test_mode: bool = get_node_or_null("accel") != null or get_node_or_null("handling") != null
+	var test_mode: bool = get_node_or_null("accel") != null or get_node_or_null("handling") != null or get_node_or_null("smokeshot") != null
 	# Darbe algılama: bir fizik adımındaki ani hız değişimi = çarpışma şiddeti (duvar ya da araç)
 	var dv: float = (car.prev_vel - body.linear_velocity).length()
 	car.prev_vel = body.linear_velocity
@@ -689,7 +715,7 @@ func _drive(car: Dictionary, delta: float) -> void:
 		car.boost = false
 		body.nitro_on = false
 		for f in car.flames: f.emitting = false
-		car.smoke.emitting = true
+		_set_smoke(car, true)
 		if car.wreck <= 0.0: _recover(car)
 		return
 	car.immune = car.get("immune", 0.0) - delta
@@ -718,7 +744,8 @@ func _drive(car: Dictionary, delta: float) -> void:
 			car.boost = false
 	body.nitro_on = car.boost and body.throttle > 0.1
 	for f in car.flames: f.emitting = body.nitro_on
-	car.smoke.emitting = body.slip > 0.35 and absf(body.speed) > 8.0 and body.on_ground >= 2
+	var burnout: bool = body.throttle > 0.8 and absf(body.speed) < 12.0 and body.slip > 0.2
+	_set_smoke(car, body.on_ground >= 2 and ((body.slip > 0.3 and absf(body.speed) > 4.0) or burnout))
 	# Kurtarma: ters dönme, takılma, ters yön, pist dışı
 	var up_dot: float = body.global_basis.y.dot(Vector3.UP)
 	car.flip = car.flip + delta if up_dot < 0.35 else 0.0
@@ -1642,7 +1669,7 @@ func _warmup() -> void:
 		c.body.freeze = true
 		c.body.global_position = origin + side * ((i % 4) - 1.5) * 2.6 + fwd * (int(i / 4) * 5.0)
 		for f in c.flames: f.emitting = true
-		c.smoke.emitting = true
+		_set_smoke(c, true)
 		c.sparks.global_position = c.body.global_position + Vector3.UP
 		c.sparks.restart()
 		c.debris.global_position = c.body.global_position + Vector3.UP
