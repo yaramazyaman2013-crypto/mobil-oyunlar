@@ -20,38 +20,40 @@ const TRACK_POINTS := [
 const MODELS := {
 	"concept": {"path": "res://assets/real/cars/CarConcept.glb", "yaw": 0.0, "keep": [], "wheels": "Wheel*", "paint": true},
 	"goblin": {"nolod": true, "path": "res://assets/real/cars/goblin.glb", "yaw": PI, "keep": [], "wheels": "bone_rotation_*", "paint": true},
-	"evo6": {"pm": {"material": "replace"}, "path": "res://assets/real/cars/evo6.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
-	"a110": {"pm": {"A110_GT4_Ext_Paint_13": "replace", "A110_GT4_Ext_Paint": "replace"}, "path": "res://assets/real/cars/a110.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
-	"xj220": {"pm": {"body": "tint"}, "path": "res://assets/real/cars/xj220.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
-	"vayanne": {"pm": {"carPaint": "tint"}, "path": "res://assets/real/cars/vayanne.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
-	"zerouno": {"pm": {"car_italdesign_zeruno_occ": "tint"}, "path": "res://assets/real/cars/zerouno.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
-	"owl": {"pm": {"Body": "tint"}, "path": "res://assets/real/cars/owl.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
-	"m8gte": {"pm": {"Material.001": "replace"}, "path": "res://assets/real/cars/m8gte.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
-	"lmp919": {"pm": {".003": "replace"}, "path": "res://assets/real/cars/lmp919.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"azura": {"pm": {"Azura_Body": "tint"}, "hide": ["Shadow"], "path": "res://assets/real/cars/azura.glb", "yaw": 0.0, "keep": [], "wheels": "WH_??", "paint": false},
+	"wulf": {"pm": {"RevoPaintjob": "replace"}, "path": "res://assets/real/cars/wulf.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"daimyo": {"pm": {"Paintjob": "replace"}, "path": "res://assets/real/cars/daimyo.glb", "yaw": 0.0, "keep": [], "wheels": "Wheel??_*", "paint": false},
+	"mohawk": {"pm": {"Paintjob": "replace"}, "path": "res://assets/real/cars/mohawk.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"gourami": {"pm": {"Paint": "tint"}, "hide": ["BlackWheel"], "path": "res://assets/real/cars/gourami.glb", "yaw": PI, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"patriot": {"pm": {"Paintjob": "replace"}, "path": "res://assets/real/cars/patriot.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"velocita": {"pm": {"None_ItaliaVelocitaPaintjob1.png": "replace"}, "path": "res://assets/real/cars/velocita.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"kralz": {"pm": {"Object2121Mtl": "tint", "Object2521Mtl": "tint"}, "path": "res://assets/real/cars/kralz.glb", "yaw": PI / 2.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
 }
+## Tüm modellerde gizlenen sergi/sahne parçaları (zemin, duvar, cam kırıkları)
+const PROP_WORDS := ["glasscherbe", "scherbe", "plattform", "smokewall", "background", "floortiles", "floorchrome", "floorcolour"]
 const GARAGE := [
 	{"name": "AURORA", "model": "concept", "color": Color(0.05, 0.3, 0.85), "price": 0},
-	{"name": "SAMURAY R6", "model": "evo6", "color": Color.WHITE, "price": 150},
-	{"name": "ALPİN GT4", "model": "a110", "color": Color.WHITE, "price": 300},
-	{"name": "KEDİ 220", "model": "xj220", "color": Color.WHITE, "price": 450},
-	{"name": "DEUS V", "model": "vayanne", "color": Color.WHITE, "price": 600},
-	{"name": "ZERO GT", "model": "zerouno", "color": Color.WHITE, "price": 750},
+	{"name": "RÜZGAR", "model": "azura", "color": Color.WHITE, "price": 150},
+	{"name": "BOZKURT RALLİ", "model": "wulf", "color": Color.WHITE, "price": 300},
+	{"name": "SAMURAY 4x4", "model": "daimyo", "color": Color.WHITE, "price": 450},
+	{"name": "MOHİKAN GT", "model": "mohawk", "color": Color.WHITE, "price": 600},
+	{"name": "SULTAN", "model": "gourami", "color": Color.WHITE, "price": 750},
 	{"name": "GOBLIN V12", "model": "goblin", "color": Color(0.2, 0.7, 0.05), "price": 900},
-	{"name": "BAYKUŞ HİPER", "model": "owl", "color": Color.WHITE, "price": 1100},
-	{"name": "M-GTE YARIŞ", "model": "m8gte", "color": Color.WHITE, "price": 1300},
-	{"name": "LMP HİBRİT", "model": "lmp919", "color": Color.WHITE, "price": 1600},
+	{"name": "VATANSEVER R", "model": "patriot", "color": Color.WHITE, "price": 1100},
+	{"name": "VELOCE R", "model": "velocita", "color": Color.WHITE, "price": 1300},
+	{"name": "KRALZ XSR", "model": "kralz", "color": Color.WHITE, "price": 1600},
 ]
 const RIVALS := [
 	{"name": "KARTAL", "model": "goblin", "color": Color(0.03, 0.03, 0.035)},
-	{"name": "ŞAHİN", "model": "zerouno", "color": Color.WHITE},
-	{"name": "KURT", "model": "xj220", "color": Color.WHITE},
+	{"name": "ŞAHİN", "model": "kralz", "color": Color.WHITE},
+	{"name": "KURT", "model": "wulf", "color": Color.WHITE},
 	{"name": "TİLKİ", "model": "concept", "color": Color(0.6, 0.05, 0.08)},
-	{"name": "ŞİMŞEK", "model": "a110", "color": Color.WHITE},
-	{"name": "BORA", "model": "owl", "color": Color.WHITE},
-	{"name": "POYRAZ", "model": "evo6", "color": Color.WHITE},
-	{"name": "ATMACA", "model": "m8gte", "color": Color.WHITE},
-	{"name": "PARS", "model": "vayanne", "color": Color.WHITE},
-	{"name": "VAŞAK", "model": "lmp919", "color": Color.WHITE},
+	{"name": "ŞİMŞEK", "model": "azura", "color": Color.WHITE},
+	{"name": "BORA", "model": "patriot", "color": Color.WHITE},
+	{"name": "POYRAZ", "model": "daimyo", "color": Color.WHITE},
+	{"name": "ATMACA", "model": "velocita", "color": Color.WHITE},
+	{"name": "PARS", "model": "mohawk", "color": Color.WHITE},
+	{"name": "VAŞAK", "model": "gourami", "color": Color.WHITE},
 	{"name": "KAPLAN", "model": "goblin", "color": Color(0.9, 0.5, 0.02)},
 	{"name": "YILDIRIM", "model": "concept", "color": Color(0.85, 0.85, 0.83)},
 ]
@@ -81,15 +83,11 @@ var confetti: CPUParticles3D
 var last_lap_shown := false
 var merged_cache := {}
 var split_cache := {}
+const GARAGE_POS := Vector3(0, -300, 0)
+var garage: Garage
+var garage_angle := 0.6
+var cheer := 0.25          # tribün coşkusu (seyirciler zıplar)
 var rival_engine: AudioStreamWAV
-# Dinamik çözünürlük: 60 FPS'i korumak için 3B çözünürlük ölçeği kare süresine göre ayarlanır
-const RES_TOP := [0.8, 0.92, 1.0]
-const RES_LOW := [0.55, 0.65, 0.75]
-var res_scale := 1.0
-var res_timer := 0.0
-var frame_ms := 16.0
-var gpu_ms := 10.0
-var last_us := 0
 var tick := 0
 var hud_ranks := {}
 var quality := 2
@@ -163,7 +161,7 @@ func _ready() -> void:
 	randomize()
 	_load_save()
 	paint_index = int(save.paint)
-	quality = int(save.quality) if int(save.quality) >= 0 else (0 if OS.has_feature("mobile") else 2)
+	quality = int(save.quality) if int(save.quality) >= 0 else (1 if OS.has_feature("mobile") else 2)
 	if OS.get_environment("QUALITY") != "": quality = int(OS.get_environment("QUALITY"))
 	touch_mode = DisplayServer.is_touchscreen_available()
 	for k in MODELS: model_scenes[k] = load(MODELS[k].path)
@@ -183,12 +181,53 @@ func _ready() -> void:
 	_go_menu()
 	minimap.game = self
 	_setup_minimap.call_deferred()
-	if OS.get_cmdline_user_args().is_empty(): _warmup()
+	if OS.get_cmdline_user_args().is_empty():
+		_warmup()
+		_show_splash()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--tool="):
 			var tool: Node = load("res://tools/%s.gd" % arg.substr(7)).new()
 			tool.name = arg.substr(7)
 			add_child(tool)
+
+
+## Açılış logosu (Aslan Software): uygulama açıldıktan itibaren toplam 5 sn, sonra yumuşakça kaybolur
+func _park_player() -> void:
+	player.body.freeze = true
+	player.body.linear_velocity = Vector3.ZERO
+	player.body.global_transform = Transform3D(Basis(Vector3.UP, garage_angle), garage.center)
+
+
+## Garajdayken güneş kapalı, ortam ışığı kısık (iç mekân); yarışta normale döner
+func _garage_mode(on: bool) -> void:
+	sun.visible = not on
+	world_env.ambient_light_energy = 0.45 if on else 0.9
+	world_env.fog_enabled = not on
+
+
+func _show_splash() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(layer)
+	var bg := ColorRect.new()
+	bg.color = Color.WHITE
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(bg)
+	var logo := TextureRect.new()
+	logo.texture = load("res://assets/ui/aslan_logo.png")
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	logo.anchor_top = 0.08
+	logo.anchor_bottom = 0.92
+	bg.add_child(logo)
+	var hold := maxf(5.0 - Time.get_ticks_msec() / 1000.0, 1.0)
+	var tw := create_tween()
+	tw.tween_interval(hold)
+	tw.tween_property(bg, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(layer.queue_free)
 
 
 func _setup_minimap() -> void:
@@ -287,6 +326,10 @@ func _build_world() -> void:
 	add_child(sun)
 
 	_build_track()
+	garage = Garage.new()
+	garage.position = GARAGE_POS
+	add_child(garage)
+	garage.build(quality)
 
 	camera = Camera3D.new()
 	camera.doppler_tracking = Camera3D.DOPPLER_TRACKING_IDLE_STEP
@@ -408,14 +451,14 @@ func _apply_quality() -> void:
 	var q := quality
 	var vp := get_viewport()
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-	vp.mesh_lod_threshold = [4.0, 2.0, 1.0][q]
-	res_scale = RES_TOP[q]
-	vp.scaling_3d_scale = res_scale
-	RenderingServer.viewport_set_measure_render_time(vp.get_viewport_rid(), true)
+	vp.mesh_lod_threshold = [2.0, 1.5, 1.0][q]
+	vp.scaling_3d_scale = 1.0
 	# Telefonda 60'a kilitle: ısınma/kısılma azalır, kare süresi düzenli kalır
 	Engine.max_fps = 60 if OS.has_feature("mobile") else 0
-	vp.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_DISABLED, Viewport.MSAA_2X][q]
-	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if q >= 1 else Viewport.SCREEN_SPACE_AA_DISABLED
+	# Çözünürlük her kalitede tam (%100): görüntü asla pikselleşmez; kenarlar MSAA ile yumuşatılır
+	vp.msaa_3d = [Viewport.MSAA_2X, Viewport.MSAA_4X, Viewport.MSAA_4X][q]
+	if OS.has_feature("mobile") or OS.get_environment("MOBILE_TEST") != "": vp.msaa_3d = Viewport.MSAA_2X   # mobil renderer: 4x kararsız
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 	world_env.ssao_enabled = q == 2
 	world_env.glow_enabled = q >= 1
 	world_env.fog_enabled = true
@@ -470,7 +513,7 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 		for mi in model.find_children("*", "MeshInstance3D", true, false):
 			var gm := mi as MeshInstance3D
 			gm.visibility_range_end = [220.0, 400.0, 0.0][quality]
-			if gm.name != "ShadowProxy": gm.lod_bias = [0.3, 0.6, 1.0][quality]
+			if gm.name != "ShadowProxy": gm.lod_bias = [0.3, 0.45, 1.0][quality]
 			if quality == 0 and gm.name == "ShadowProxy": gm.visible = false
 	var tune: Dictionary = info.get("tune", {})
 	for k in tune: body.set(k, tune[k])
@@ -551,6 +594,19 @@ func _load_model(model_id: String, parent: Node3D) -> Node3D:
 				if k == m or k.is_ancestor_of(m): ok = true
 			if not ok: m.visible = false
 	for m in inst.find_children("*shadow*", "MeshInstance3D", true, false): m.visible = false
+	var hide_words: Array = spec.get("hide", []).map(func(w): return String(w).to_lower())
+	for m in inst.find_children("*", "MeshInstance3D", true, false):
+		var nm := String(m.name).to_lower() + " " + String(m.get_parent().name).to_lower()
+		var full := nm
+		var mm := m as MeshInstance3D
+		if mm.mesh:
+			for si in mm.mesh.get_surface_count():
+				var mat := mm.get_active_material(si)
+				if mat: full += " " + mat.resource_name.to_lower()
+		for w in PROP_WORDS:
+			if nm.contains(w): m.visible = false
+		for w in hide_words:
+			if full.contains(w): m.visible = false
 	# Optimizasyon: dışarıdan görünmeyen iç parçaları gizle (her biri ayrı çizim çağrısı)
 	# Sadece dışarıdan görünmeyen küçük parçalar (taban/iskelet/direk gibi yapı parçaları kalır)
 	var hidden_words := ["pedal", "seat", "steering", "dash", "floormat", "badge", "axle", "radiator"]
@@ -631,7 +687,7 @@ func _fix_glass(model: Node3D, alpha := 0.93) -> void:
 			if m == null: continue
 			var n := m.resource_name.to_lower()
 			var skip := false
-			for w in ["light", "red", "lamp", "head", "tail", "brake", "blink", "reverse"]:
+			for w in ["light", "red", "lamp", "head", "tail", "brake", "blink", "reverse", "orange", "paint"]:
 				if n.contains(w): skip = true
 			if (n.contains("glass") or n.contains("window")) and not skip:
 				var g := StandardMaterial3D.new()
@@ -1328,6 +1384,8 @@ func _go_menu() -> void:
 	pause_menu.visible = false
 	state = State.MENU
 	_setup_grid()
+	_park_player()
+	_garage_mode(true)
 	engine.stop()
 	skid.stop()
 	hud.visible = false
@@ -1346,6 +1404,7 @@ func _start_race() -> void:
 	save.paint = paint_index
 	_write_save()
 	_setup_grid()
+	_garage_mode(false)
 	state = State.COUNTDOWN
 	countdown = 3.0
 	last_lap_shown = false
@@ -1391,16 +1450,20 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.05)
+	cheer = move_toward(cheer, 0.25, delta * 0.06)
+	if track and track.crowd_mat: track.crowd_mat.set_shader_parameter("cheer", cheer)
 	match state:
 		State.MENU:
-			menu_angle += delta * 0.25
-			var p: Vector3 = player.body.global_position
-			var f: Vector3 = track.tangent(player.s)
-			var r: Vector3 = f.cross(Vector3.UP)
-			var off: Vector3 = (-f * cos(menu_angle) + r * sin(menu_angle)) * 7.5
-			camera.position = p + off + Vector3.UP * 2.0
-			camera.look_at(p + Vector3.UP * 0.6)
-			camera.fov = 45
+			# Garaj: araç döner platformda yavaşça döner, kamera hafifçe salınır
+			menu_angle += delta
+			garage_angle += delta * 0.22
+			garage.turntable.rotation.y = garage_angle
+			player.body.global_transform = Transform3D(Basis(Vector3.UP, garage_angle), garage.center)
+			var c: Vector3 = garage.center
+			var a := 0.55 + sin(menu_angle * 0.12) * 0.25
+			camera.position = c + Vector3(sin(a) * 7.6, 1.85 + sin(menu_angle * 0.2) * 0.15, cos(a) * 7.6)
+			camera.look_at(c + Vector3(0, 0.55, 0))
+			camera.fov = 48
 			return
 		State.COUNTDOWN:
 			var before := ceili(countdown)
@@ -1414,6 +1477,7 @@ func _process(delta: float) -> void:
 				for lm in track.start_lights: lm.emission = Color(0.1, 1.0, 0.2)
 				_music_muffled(false)
 				sfx.crowd.play()
+				cheer = 1.0
 				for c in cars:
 					var es: Node = c.body.get_node_or_null("EngineSound")
 					if es: es.play()
@@ -1441,27 +1505,6 @@ func _process(delta: float) -> void:
 			engine.volume_db = lerpf(engine.volume_db, -7.0 + 4.0 * body.throttle, delta * 5.0)
 	_update_camera(delta)
 	_update_hud()
-	_adapt_resolution()
-
-
-func _adapt_resolution() -> void:
-	var now := Time.get_ticks_usec()
-	var ms := (now - last_us) / 1000.0
-	last_us = now
-	if ms <= 0.0 or ms > 100.0: return
-	frame_ms = lerpf(frame_ms, ms, 0.1)
-	var vp := get_viewport()
-	var g := RenderingServer.viewport_get_measured_render_time_gpu(vp.get_viewport_rid())
-	if g > 0.0: gpu_ms = lerpf(gpu_ms, g, 0.1)
-	res_timer += ms / 1000.0
-	if res_timer < 0.4 or state == State.MENU: return
-	res_timer = 0.0
-	var old := res_scale
-	if frame_ms > 17.8 or gpu_ms > 15.0:
-		res_scale = maxf(res_scale - 0.05, RES_LOW[quality])
-	elif frame_ms < 17.2 and gpu_ms < 11.0:
-		res_scale = minf(res_scale + 0.02, RES_TOP[quality])
-	if res_scale != old: vp.scaling_3d_scale = res_scale
 
 
 func _ranks() -> Dictionary:
@@ -1698,6 +1741,7 @@ func _rebuild_player() -> void:
 	player = _make_car(g.model, g.color, true, old.s, old.x, {"tune": _player_tune(paint_index), "look": _player_look(paint_index)})
 	player.body.freeze = true
 	cars[cars.find(old)] = player
+	if state == State.MENU: _park_player()
 	old.body.queue_free()
 	old.sparks.queue_free()
 	old.debris.queue_free()
@@ -1938,7 +1982,7 @@ func _build_ui() -> void:
 	buy_button = _button("YARIŞ!", menu, _on_main_button)
 	buy_button.add_theme_font_size_override("font_size", 40)
 	_box(buy_button, 0.5, 1, 0, -70, 380, 86)
-	var credit := _label("Araçlar: Eric Chadwick/DGG, ollitei, vecarz/heynic (CC BY 4.0) · Çevre: Poly Haven (CC0) · Ses: Kenney (CC0) · Fizik: Godot Jolt", 13, menu, Color(1, 1, 1, 0.5))
+	var credit := _label("Araçlar: Eric Chadwick/DGG, ollitei, Swiss_Fox, ministephen, Tyler_Dave, mk2design (CC BY 4.0) · Çevre: Poly Haven (CC0) · Ses: Kenney (CC0) · Fizik: Godot Jolt", 13, menu, Color(1, 1, 1, 0.5))
 	_box(credit, 0.5, 1, 0, -12, 1200, 20)
 
 	# --- Modifiye atölyesi
@@ -2101,6 +2145,7 @@ func _update_hud() -> void:
 		big_label.add_theme_font_size_override("font_size", 110)
 		_pop(big_label)
 		sfx.crowd.play()
+		cheer = 1.0
 	speed_lines.emitting = state == State.RACE and (player.boost or absf(player.body.speed) > 62.0)
 	time_label.text = _fmt_time(race_time)
 	speedo.speed_kmh = absf(player.body.speed) * 3.6
@@ -2185,6 +2230,7 @@ func _finish_player() -> void:
 	confetti.global_position = player.body.global_position + player.body.global_basis.z * 10.0 + Vector3.UP * 1.0
 	confetti.restart()
 	sfx.crowd.play()
+	cheer = 1.0
 	await get_tree().create_timer(1.5).timeout
 	if state != State.FINISHED: return
 	_fill_results()

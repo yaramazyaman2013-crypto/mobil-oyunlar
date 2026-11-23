@@ -56,11 +56,11 @@ get(files(HDRI)["hdri"]["1k"]["hdr"]["url"], os.path.join(ROOT, "sky", HDRI + ".
 get("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/CarConcept/glTF-Binary/CarConcept.glb",
     os.path.join(ROOT, "cars", "CarConcept.glb"))
 
-# Gerçekçi araçlar (vecarz / heynic, CC BY 4.0) Sketchfab indirme API'siyle alındı
+# Kurgusal/markasız araçlar (CC BY 4.0) Sketchfab indirme API'siyle alındı
 # (SKETCHFAB_TOKEN gerekir; glb biçimi) -> assets/real/cars/<ad>.glb
-VECARZ = {
-    "owl": "8c29654fd6ff413cb9953f61171e1d5f", "xj220": "48f00f3f68834595bec22429b46a502c",
-    "a110": "7dc988bfd038404c849566364a79b03c", "evo6": "c3d5dcd8ff724bc88c46760d92fc5188",
-    "vayanne": "37e0cb314d194d5bbac8e5232029a3ea", "zerouno": "0106bcb6d4554d4b9228d2a3aa1ec0ec",
-    "m8gte": "4e503bae03c642c08c413d7796bed081", "lmp919": "1f4e28d5d7b64068afdc50ab92e86c6b",
+CARS = {
+    "mohawk": "2c5ea0d5f73246549c0b9b68f53627e9", "patriot": "d87ddc3e30134ff2990d8ee4d2586bdd",
+    "wulf": "5fa828a6a9d34c1b85835164191790a8", "velocita": "1696b756b09644bf924d31559287b70f",
+    "daimyo": "dd7c144e3ae64eeb9e65ba6e512fd559", "kralz": "61502e501b85485dae3fa5a2cbb6aa7b",
+    "gourami": "bf29aca039c447ab913608e3f6818875", "azura": "2e1a3699de7e4f688d328dc005ef1aac",
 }

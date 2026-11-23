@@ -6,16 +6,18 @@ Gerçekçi grafikli 3D arcade yarış oyunu — Godot 4.3, Forward+ (telefonda M
 - **Gerçek araç fiziği** (Jolt Physics): 4 tekerlek yay+amortisörlü süspansiyon, lastik tutuşu, motor gücü eğrisi, aerodinamik bastırma, el freniyle kontrollü drift
 - **Çarpışma fiziği:** sert darbelerde araçlar kontrolden çıkıp takla atar, enkaz saçılır; oyuncu kazasında ağır çekim; rakibe sert vuruş = TAKEDOWN
 - PC: **W** gaz, **S** fren/geri, **A/D** direksiyon, **Boşluk** el freni (drift), **Shift** nitro, **R** piste dön, **Esc** duraklat
-- **Yarış atmosferi:** tempolu müzik, seyirci tribünleri ve tezahürat, sponsor afişleri, start ışıkları, rakip motor sesleri, fren izleri, "SON TUR" duyurusu, bitişte konfeti, yüksek hızda hız çizgileri
+- **Yarış atmosferi:** tempolu müzik, basamaklı tribünler (koltuk sıraları, tek tek zıplayan seyirciler, kolonlu çatı, ışık direkleri, bayraklar) ve tezahürat, sponsor afişleri, start ışıkları, rakip motor sesleri, fren izleri, "SON TUR" duyurusu, bitişte konfeti, yüksek hızda hız çizgileri
 - Telefon (yatay): ekranda ◀ ▶, GAZ, FREN, DRİFT, NİTRO butonları
 - Arayüz: mini harita, ilerleme çubuğu, duraklatma menüsü, 10 araçlık sonuç tablosu, araç istatistikli garaj
 - Grafik kalitesi menüden: DÜŞÜK (telefon varsayılanı) / ORTA / YÜKSEK
-- Garaj: 10 araç satın alma
+- Açılışta Aslan Software logosu
+- **Garaj:** döner platformlu, ışıklı showroom; 10 markasız araç satın alma
 - **Modifiye atölyesi** (araç başına kaydedilir): MOTOR, TURBO/NİTRO, LASTİK, SÜSPANSİYON yükseltmeleri; BOYA (12 renk), NEON alt ışık, CAM FİLMİ, NİTRO ALEVİ rengi
 
 ## Performans
 - Araç parçaları malzemeye göre tek mesh'te birleştirilir, iç parçalar atılır; gövde ve tekerlekler için derlemede LOD üretilir (`assets/baked/`, `BAKE=1 godot -- --tool=bake`)
-- Dinamik çözünürlük: kare süresine göre 3B çözünürlük ayarlanır (60 FPS hedefi); telefonda 60 FPS kilidi
+- Görüntü her zaman tam çözünürlükte (çözünürlük düşürme yok) + MSAA kenar yumuşatma; telefonda 60 FPS kilidi
+- Arazi 32x32 hücrelik bölgelere ayrılır, her bölgenin 3 detay seviyesi var (uzak dağlar seyrek)
 - Gölgede araçların kaba LOD'u kullanılır
 - Kaya/bitkiler sadeleştirilmiş ve bölgesel MultiMesh ile çizilir
 - Tüm dokular GPU sıkıştırmalı (ETC2/ASTC/S3TC) ve mipmap'li
@@ -28,7 +30,7 @@ Gerçekçi grafikli 3D arcade yarış oyunu — Godot 4.3, Forward+ (telefonda M
 ## Varlıklar ve lisanslar
 - Araç: *CarConcept* — Eric Chadwick / Darmstadt Graphics Group, **CC BY 4.0** (Khronos glTF Sample Assets)
 - Araç: *Fictional supercar – V12 Goblin* — Olli Teittinen (ollitei), **CC BY 4.0** (Sketchfab)
-- Araçlar: *Aspark Owl 2020, Jaguar XJ220 1991, A110 GT4, Mitsubishi Lancer Evolution 6, Deus Vayanne Concept 2022, Italdesign Zerouno 2017, BMW M8 GTE, Porsche 919 Hybrid Evo* — vecarz (heynic), **CC BY 4.0** (Sketchfab; oyunda kurgusal adlarla). Gerçek marka tasarımlarıdır: mağazada yayından önce bkz. `assets/CREDITS.md`
+- Araçlar (hepsi kurgusal/markasız): *Rayback Mohawk, Patriot P10-XR, Wulf Revo, Italia Velocita, Ozutsu Daimyo* — Swiss_Fox; *Kralzfiller XSR* — Tyler_Dave; *Gourami* — ministephen; *Generic Coupe Azura* — mk2design; hepsi **CC BY 4.0** (Sketchfab). Ayrıntı: `assets/CREDITS.md`
 - Bitkiler: **Poly Haven**, CC0 (oyun için `tools/optimize_env.py` ile sadeleştirildi)
 - Kayalar, dokular, gökyüzü (HDRI): **Poly Haven**, CC0
 - Fizik motoru: [Godot Jolt](https://github.com/godot-jolt/godot-jolt) (MIT)

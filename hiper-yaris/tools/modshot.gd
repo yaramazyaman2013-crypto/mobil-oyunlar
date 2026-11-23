@@ -13,6 +13,7 @@ func _ready() -> void:
 		i += 1
 func _process(_d: float) -> void:
 	f += 1
+	if f < 30: g._garage_mode(false)
 	if f < 15:
 		g.menu.visible = false
 		var mid: float = 100.0 + 4.5 * 6.0
@@ -24,9 +25,13 @@ func _process(_d: float) -> void:
 		g.camera.look_at(g.track.point(-60.0, -6.0) + Vector3.UP * 3.0)
 		g.camera.fov = 70
 	elif f == 30:
+		g._garage_mode(true)
+		g.menu.visible = true
+	elif f == 50:
+		g.get_viewport().get_texture().get_image().save_png("res://build/shots/garage.png")
 		g._show_mods(true)
 	if f == 14: g.get_viewport().get_texture().get_image().save_png("res://build/shots/mod_fleet.png")
 	if f == 29: g.get_viewport().get_texture().get_image().save_png("res://build/shots/stands.png")
-	if f == 45:
+	if f == 65:
 		g.get_viewport().get_texture().get_image().save_png("res://build/shots/mod_menu.png")
 		get_tree().quit()

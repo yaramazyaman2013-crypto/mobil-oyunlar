@@ -574,39 +574,17 @@ func _build_terrain() -> void:
 			var edge_d: float = minf(minf(x, _hw - 1 - x), minf(z, _hh - 1 - z)) * HCELL
 			var fall := smoothstep(0.0, 60.0, edge_d)
 			_h[k] = lerpf(-60.0, h + base, fall)
-	# Mesh
-	var verts := PackedVector3Array()
-	var norms := PackedVector3Array()
-	verts.resize(total)
-	norms.resize(total)
+	# Mesh: bölgelere (32x32 hücre) ayrılmış, her bölgenin 3 detay seviyesi var (yakın tam, uzak seyrek).
+	# Seviyeler görünürlük mesafesiyle değişir; kenar "etekleri" seviye geçişlerinde boşluk bırakmaz.
+	_tnorm.resize(total)
 	for z in _hh:
 		for x in _hw:
 			var k := z * _hw + x
-			verts[k] = Vector3(_horigin.x + x * HCELL, _h[k], _horigin.y + z * HCELL)
 			var hl := _h[k - 1] if x > 0 else _h[k]
 			var hr := _h[k + 1] if x < _hw - 1 else _h[k]
 			var hd := _h[k - _hw] if z > 0 else _h[k]
 			var hu := _h[k + _hw] if z < _hh - 1 else _h[k]
-			norms[k] = Vector3(hl - hr, 2.0 * HCELL, hd - hu).normalized()
-	var idxs := PackedInt32Array()
-	idxs.resize((_hw - 1) * (_hh - 1) * 6)
-	var t := 0
-	for z in _hh - 1:
-		for x in _hw - 1:
-			var a := z * _hw + x
-			var b := a + _hw
-			idxs[t] = a; idxs[t + 1] = a + 1; idxs[t + 2] = b
-			idxs[t + 3] = a + 1; idxs[t + 4] = b + 1; idxs[t + 5] = b
-			t += 6
-	var arr := []
-	arr.resize(Mesh.ARRAY_MAX)
-	arr[Mesh.ARRAY_VERTEX] = verts
-	arr[Mesh.ARRAY_NORMAL] = norms
-	arr[Mesh.ARRAY_INDEX] = idxs
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	var mi := MeshInstance3D.new()
-	mi.mesh = mesh
+			_tnorm[k] = Vector3(hl - hr, 2.0 * HCELL, hd - hu).normalized()
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://scripts/terrain.gdshader")
 	mat.set_shader_parameter("rock_tex", _tex("res://assets/real/textures/cliff_side/albedo.jpg"))
@@ -615,8 +593,77 @@ func _build_terrain() -> void:
 	mat.set_shader_parameter("sand_nrm", _tex("res://assets/real/textures/red_sand/normal.jpg"))
 	mat.set_shader_parameter("gravel_tex", _tex("res://assets/real/textures/rocky_terrain_02/albedo.jpg"))
 	mat.set_shader_parameter("hq", env_quality > 0.5)
-	mi.material_override = mat
-	add_child(mi)
+	const CS := 32
+	var csz := CS * HCELL
+	var ranges := [[0.0, csz * 1.7], [csz * 1.7, csz * 3.6], [csz * 3.6, 0.0]]
+	for cz in range(0, _hh - 1, CS):
+		for cx in range(0, _hw - 1, CS):
+			var x1 := mini(cx + CS, _hw - 1)
+			var z1 := mini(cz + CS, _hh - 1)
+			for li in 3:
+				var tmi := MeshInstance3D.new()
+				tmi.mesh = _terrain_chunk(cx, cz, x1, z1, 1 << li)
+				tmi.material_override = mat
+				tmi.visibility_range_begin = ranges[li][0]
+				tmi.visibility_range_end = ranges[li][1]
+				add_child(tmi)
+
+
+
+var _tnorm := PackedVector3Array()
+
+
+## Arazi bölgesi: [x0..x1]x[z0..z1] ızgara noktaları, verilen adımla; kenarlarda aşağı inen etek
+func _terrain_chunk(x0: int, z0: int, x1: int, z1: int, stride: int) -> ArrayMesh:
+	var xs: Array[int] = []
+	var zs: Array[int] = []
+	var x := x0
+	while x < x1:
+		xs.append(x)
+		x += stride
+	xs.append(x1)
+	var z := z0
+	while z < z1:
+		zs.append(z)
+		z += stride
+	zs.append(z1)
+	var nx := xs.size()
+	var nz := zs.size()
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var idxs := PackedInt32Array()
+	for zi in nz:
+		for xi in nx:
+			var k: int = zs[zi] * _hw + xs[xi]
+			verts.append(Vector3(_horigin.x + xs[xi] * HCELL, _h[k], _horigin.y + zs[zi] * HCELL))
+			norms.append(_tnorm[k])
+	for zi in nz - 1:
+		for xi in nx - 1:
+			var a := zi * nx + xi
+			var b := a + nx
+			idxs.append_array([a, a + 1, b, a + 1, b + 1, b])
+	# Etek: kenar boyunca aşağı sarkan şerit (iki yüzlü)
+	var drop := 3.0 * stride * HCELL / 6.0 + 2.0
+	var edges: Array = []
+	for xi in nx - 1: edges.append([xi, xi + 1])
+	for xi in nx - 1: edges.append([(nz - 1) * nx + xi, (nz - 1) * nx + xi + 1])
+	for zi in nz - 1: edges.append([zi * nx, (zi + 1) * nx])
+	for zi in nz - 1: edges.append([zi * nx + nx - 1, (zi + 1) * nx + nx - 1])
+	for e in edges:
+		var a: int = e[0]
+		var b: int = e[1]
+		var base := verts.size()
+		verts.append_array([verts[a] - Vector3(0, drop, 0), verts[b] - Vector3(0, drop, 0)])
+		norms.append_array([norms[a], norms[b]])
+		idxs.append_array([a, b, base + 1, a, base + 1, base, a, base + 1, b, a, base, base + 1])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = norms
+	arr[Mesh.ARRAY_INDEX] = idxs
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return mesh
 
 
 # ---------------------------------------------------------------- dekor (kaya ve bitkiler)
@@ -742,6 +789,26 @@ func _build_env() -> void:
 
 var start_lights: Array = []    # başlangıç kapısındaki ışıklar (main kontrol eder)
 var stands_center := Vector3.ZERO
+var crowd_mat: ShaderMaterial
+
+
+func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, uv := [Vector2(0, 1), Vector2(1, 1), Vector2(1, 0), Vector2(0, 0)], uv2 := Vector2.ZERO) -> void:
+	var v := [a, b, c, d]
+	for t in [0, 1, 2, 0, 2, 3]:
+		st.set_uv(uv[t])
+		st.set_uv2(uv2)
+		st.add_vertex(v[t])
+
+
+## Kare kesitli kiriş (kolon/direk) p'den q'ya
+func _beam(st: SurfaceTool, p: Vector3, q: Vector3, w: float) -> void:
+	var dir := (q - p).normalized()
+	var side := dir.cross(Vector3.FORWARD if absf(dir.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT).normalized() * w * 0.5
+	var up := dir.cross(side).normalized() * w * 0.5
+	var c := [side + up, -side + up, -side - up, side - up]
+	for i in 4:
+		var j := (i + 1) % 4
+		_quad(st, p + c[i], p + c[j], q + c[j], q + c[i])
 
 
 ## Bariyerlerdeki sponsor afişleri (doku başına tek MultiMesh = 6 çizim çağrısı)
@@ -796,64 +863,110 @@ func stand_factor(i: int) -> float:
 
 func _build_stands() -> void:
 	var n := pos.size()
-	var crowd_mat := StandardMaterial3D.new()
-	crowd_mat.albedo_texture = load("res://assets/deco/crowd.png")
-	crowd_mat.roughness = 0.9
-	crowd_mat.texture_repeat = true
 	var concrete := StandardMaterial3D.new()
-	concrete.albedo_color = Color(0.62, 0.6, 0.58)
-	concrete.roughness = 0.95
+	concrete.albedo_color = Color(0.66, 0.65, 0.63)
+	concrete.roughness = 0.92
+	concrete.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var seats := StandardMaterial3D.new()
+	seats.albedo_texture = load("res://assets/deco/seats.png")
+	seats.roughness = 0.5
+	seats.cull_mode = BaseMaterial3D.CULL_DISABLED
+	crowd_mat = ShaderMaterial.new()
+	crowd_mat.shader = load("res://scripts/crowd.gdshader")
+	crowd_mat.set_shader_parameter("tex", load("res://assets/deco/crowd_row.png"))
 	var roof_m := StandardMaterial3D.new()
-	roof_m.albedo_color = Color(0.32, 0.34, 0.37)
-	roof_m.metallic = 0.4
-	roof_m.roughness = 0.5
+	roof_m.albedo_color = Color(0.78, 0.8, 0.83)
+	roof_m.metallic = 0.7
+	roof_m.roughness = 0.35
 	roof_m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var accent := StandardMaterial3D.new()
+	accent.albedo_color = Color(1.0, 0.5, 0.1)
+	accent.roughness = 0.5
+	accent.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var lamp := StandardMaterial3D.new()
+	lamp.albedo_color = Color.WHITE
+	lamp.emission_enabled = true
+	lamp.emission = Color(1.0, 0.97, 0.9)
+	lamp.emission_energy_multiplier = 4.0
+	lamp.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var steel := StandardMaterial3D.new()
+	steel.albedo_color = Color(0.35, 0.37, 0.4)
+	steel.metallic = 0.8
+	steel.roughness = 0.4
+	steel.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var i0 := STAND_I0
 	var i1 := STAND_I1
 	var sum := Vector3.ZERO
+	const ROWS := 12
+	const DEP := 0.9
+	const RISE := 0.5
+	const Y0 := 1.6
+	var x0 := HALF + 4.5
+	var xr := x0 + ROWS * DEP
+	var yr := Y0 + ROWS * RISE
 	for side in [-1.0, 1.0]:
-		var crowd_st := SurfaceTool.new()
-		crowd_st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		var back_st := SurfaceTool.new()
-		back_st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		var roof_st := SurfaceTool.new()
-		roof_st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		var x0 := HALF + 4.0
-		var x1 := HALF + 15.0
+		var sts := {}
+		for k in ["concrete", "seats", "crowd", "roof", "accent", "lamp", "steel"]:
+			var st := SurfaceTool.new()
+			st.begin(Mesh.PRIMITIVE_TRIANGLES)
+			sts[k] = st
 		for ii in range(i0, i1):
 			var a := (ii + n) % n
 			var b := (ii + 1 + n) % n
-			var pa: Vector3 = pos[a]
-			var pb: Vector3 = pos[b]
-			var ra: Vector3 = right[a] * side
-			var rb: Vector3 = right[b] * side
-			var u0 := (ii - i0) * DS / 7.0
-			var u1 := (ii + 1 - i0) * DS / 7.0
-			# Eğimli seyirci yüzeyi (yola bakar)
-			var v := [pa + ra * x0 + Vector3(0, 1.2, 0), pb + rb * x0 + Vector3(0, 1.2, 0), pb + rb * x1 + Vector3(0, 9.0, 0), pa + ra * x1 + Vector3(0, 9.0, 0)]
-			var uv := [Vector2(u0, 2.0), Vector2(u1, 2.0), Vector2(u1, 0.0), Vector2(u0, 0.0)]   # 16 sıra seyirci
-			var order := [0, 1, 2, 0, 2, 3] if side > 0 else [0, 2, 1, 0, 3, 2]
-			for t in order:
-				crowd_st.set_uv(uv[t])
-				crowd_st.add_vertex(v[t])
-			# Ön duvar (beton) ve arka duvar
-			var w := [pa + ra * x0 + Vector3(0, -1.0, 0), pb + rb * x0 + Vector3(0, -1.0, 0), pb + rb * x0 + Vector3(0, 1.2, 0), pa + ra * x0 + Vector3(0, 1.2, 0)]
-			for t in order:
-				back_st.add_vertex(w[t])
-			var bw := [pa + ra * x1 + Vector3(0, -1.0, 0), pb + rb * x1 + Vector3(0, -1.0, 0), pb + rb * x1 + Vector3(0, 11.5, 0), pa + ra * x1 + Vector3(0, 11.5, 0)]
-			for t in [order[0], order[2], order[1], order[3], order[5], order[4]]:
-				back_st.add_vertex(bw[t])
-			# Çatı
-			var rf := [pa + ra * (x0 + 1.0) + Vector3(0, 11.0, 0), pb + rb * (x0 + 1.0) + Vector3(0, 11.0, 0), pb + rb * (x1 + 0.5) + Vector3(0, 12.0, 0), pa + ra * (x1 + 0.5) + Vector3(0, 12.0, 0)]
-			for t in order:
-				roof_st.add_vertex(rf[t])
-			sum += pa
-		for pair in [[crowd_st, crowd_mat], [back_st, concrete], [roof_st, roof_m]]:
-			var st: SurfaceTool = pair[0]
+			var fa := func(x: float, y: float) -> Vector3: return pos[a] + right[a] * side * x + Vector3(0, y, 0)
+			var fb := func(x: float, y: float) -> Vector3: return pos[b] + right[b] * side * x + Vector3(0, y, 0)
+			var s0 := (ii - i0) * DS
+			var s1 := s0 + DS
+			# Ön duvar
+			_quad(sts.concrete, fa.call(x0, -1.0), fb.call(x0, -1.0), fb.call(x0, Y0), fa.call(x0, Y0))
+			# Basamaklar: koltuk arkalıklı yükselti + beton basamak + seyirci sırası
+			for k in ROWS:
+				var xk := x0 + k * DEP
+				var yk := Y0 + k * RISE
+				_quad(sts.seats, fa.call(xk, yk), fb.call(xk, yk), fb.call(xk, yk + RISE), fa.call(xk, yk + RISE),
+					[Vector2(s0 / 8.0, 1), Vector2(s1 / 8.0, 1), Vector2(s1 / 8.0, 0), Vector2(s0 / 8.0, 0)])
+				_quad(sts.concrete, fa.call(xk, yk + RISE), fb.call(xk, yk + RISE), fb.call(xk + DEP, yk + RISE), fa.call(xk + DEP, yk + RISE))
+				var xc := xk + DEP * 0.45
+				var yc := yk + RISE - 0.05
+				var off := k * 0.37 + (0.5 if side > 0 else 0.0)
+				var u0 := s0 / 14.4 + off
+				var u1 := s1 / 14.4 + off
+				_quad(sts.crowd, fa.call(xc, yc), fb.call(xc, yc), fb.call(xc, yc + 1.5), fa.call(xc, yc + 1.5),
+					[Vector2(u0, 1), Vector2(u1, 1), Vector2(u1, 0), Vector2(u0, 0)], Vector2(k + side * 20.0, 0))
+			# Arka duvar
+			_quad(sts.concrete, fa.call(xr, -1.0), fb.call(xr, -1.0), fb.call(xr, yr + 4.8), fa.call(xr, yr + 4.8))
+			# Çatı (track'e doğru hafif yükselen konsol), ön alın bandı ve altında ışık şeridi
+			var rb := yr + 4.6
+			var rf := yr + 5.6
+			_quad(sts.roof, fa.call(xr + 0.4, rb), fb.call(xr + 0.4, rb), fb.call(x0 + 0.6, rf), fa.call(x0 + 0.6, rf))
+			_quad(sts.accent, fa.call(x0 + 0.6, rf - 1.0), fb.call(x0 + 0.6, rf - 1.0), fb.call(x0 + 0.6, rf + 0.15), fa.call(x0 + 0.6, rf + 0.15))
+			_quad(sts.lamp, fa.call(x0 + 0.9, rf - 1.05), fb.call(x0 + 0.9, rf - 1.05), fb.call(x0 + 1.3, rf - 1.0), fa.call(x0 + 1.3, rf - 1.0))
+			# Korkuluk (ön duvar üstü)
+			_quad(sts.steel, fa.call(x0 - 0.05, Y0 + 0.95), fb.call(x0 - 0.05, Y0 + 0.95), fb.call(x0 - 0.05, Y0 + 1.02), fa.call(x0 - 0.05, Y0 + 1.02))
+			if ii % 10 == 0:
+				# Çatı kolonu (arka) ve eğik destek
+				_beam(sts.steel, fa.call(xr - 0.25, yr), fa.call(xr - 0.25, rb), 0.35)
+				_beam(sts.steel, fa.call(xr - 0.25, yr + 1.0), fa.call(x0 + 4.5, rb + 0.45), 0.2)
+				# Çatı üstünde bayrak direkleri
+				var fp: Vector3 = fa.call(x0 + 2.0, rf - 0.1)
+				_beam(sts.steel, fp, fp + Vector3(0, 3.5, 0), 0.08)
+				var fl := [fp + Vector3(0, 3.4, 0), fp + Vector3(0, 3.4, 0) + tan[a] * 1.6, fp + Vector3(0, 2.5, 0) + tan[a] * 1.6, fp + Vector3(0, 2.5, 0)]
+				_quad(sts.accent if (ii / 10) % 2 == 0 else sts.lamp, fl[0], fl[1], fl[2], fl[3])
+			if ii % 30 == 5:
+				# Işık direği (tribün arkasında) ve projektör paneli
+				var mp: Vector3 = fa.call(xr + 2.0, -1.0)
+				_beam(sts.steel, mp, mp + Vector3(0, 24.0, 0), 0.45)
+				var head: Vector3 = mp + Vector3(0, 24.0, 0) - right[a] * side * 0.4
+				var t2: Vector3 = tan[a]
+				_quad(sts.lamp, head - t2 * 2.0, head + t2 * 2.0, head + t2 * 2.0 + Vector3(0, 2.2, 0), head - t2 * 2.0 + Vector3(0, 2.2, 0))
+			sum += pos[a]
+		for k in sts:
+			var st: SurfaceTool = sts[k]
 			st.generate_normals()
 			var mi := MeshInstance3D.new()
 			mi.mesh = st.commit()
-			mi.material_override = pair[1]
+			mi.material_override = {"concrete": concrete, "seats": seats, "crowd": crowd_mat, "roof": roof_m, "accent": accent, "lamp": lamp, "steel": steel}[k]
+			if k == "crowd" or k == "lamp": mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(mi)
 	stands_center = sum / float((i1 - i0) * 2)
 	# Seyirci uğultusu (3D ses, tribünlerin yanında duyulur)
