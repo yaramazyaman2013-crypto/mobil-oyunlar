@@ -27,7 +27,7 @@ const MODELS := {
 	"gourami": {"pm": {"Paint": "tint"}, "hide": ["BlackWheel"], "path": "res://assets/real/cars/gourami.glb", "yaw": PI, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
 	"patriot": {"pm": {"Paintjob": "replace"}, "path": "res://assets/real/cars/patriot.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
 	"velocita": {"pm": {"None_ItaliaVelocitaPaintjob1.png": "replace"}, "path": "res://assets/real/cars/velocita.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
-	"kralz": {"pm": {"Object2121Mtl": "tint", "Object2521Mtl": "tint"}, "path": "res://assets/real/cars/kralz.glb", "yaw": PI / 2.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"kralz": {"pm": {"Object2121Mtl": "tint", "Object2521Mtl": "tint"}, "path": "res://assets/real/cars/kralz.glb", "yaw": -PI / 2.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "split_only": "wheel_1", "paint": false},
 }
 ## Tüm modellerde gizlenen sergi/sahne parçaları (zemin, duvar, cam kırıkları)
 const PROP_WORDS := ["glasscherbe", "scherbe", "plattform", "smokewall", "background", "floortiles", "floorchrome", "floorcolour"]
@@ -83,9 +83,16 @@ var confetti: CPUParticles3D
 var last_lap_shown := false
 var merged_cache := {}
 var split_cache := {}
+var far_cache := {}
+var mat_color_cache := {}
+var far_mat: ShaderMaterial
 const GARAGE_POS := Vector3(0, -300, 0)
 var garage: Garage
 var garage_angle := 0.6
+var music_muffled := true
+var warming := false
+var settings_menu: Control
+var vol_labels := {}
 var cheer := 0.25          # tribün coşkusu (seyirciler zıplar)
 var rival_engine: AudioStreamWAV
 var tick := 0
@@ -117,7 +124,7 @@ var autopilot := false   # test botu için
 var debug_log := false
 
 # Kayıt
-var save := {"level": 1, "coins": 0, "paints": [0], "paint": 0, "motor": 0, "nitro": 0, "quality": -1, "mods": {}}
+var save := {"level": 1, "coins": 0, "paints": [0], "paint": 0, "motor": 0, "nitro": 0, "quality": -1, "mods": {}, "vol": {"master": 0.9, "music": 0.7, "sfx": 0.9, "engine": 0.9}}
 var paint_index := 0
 
 # Arayüz
@@ -173,8 +180,10 @@ func _ready() -> void:
 	rival_engine = load("res://sounds/engine_rival.wav")
 	rival_engine.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	rival_engine.loop_end = rival_engine.data.size() / 2
+	_setup_buses()
 	_setup_music()
-	engine = _looping("res://assets/audio/engine.ogg", -4.0)
+	_apply_volumes()
+	engine = _looping("res://assets/audio/engine.ogg", -4.0, "Engine")
 	skid = _looping("res://assets/audio/skid.ogg", -60.0)
 	_build_world()
 	_build_ui()
@@ -201,6 +210,11 @@ func _park_player() -> void:
 ## Garajdayken güneş kapalı, ortam ışığı kısık (iç mekân); yarışta normale döner
 func _garage_mode(on: bool) -> void:
 	sun.visible = not on
+	# Görünmeyen dünya hiç çizilmesin: menüde pist ve rakipler, yarışta garaj
+	garage.visible = on
+	track.visible = not on
+	for c in cars:
+		if not c.player: c.body.visible = not on
 	world_env.ambient_light_energy = 0.45 if on else 0.9
 	world_env.fog_enabled = not on
 
@@ -236,6 +250,28 @@ func _setup_minimap() -> void:
 
 
 ## Müzik: "Music" ses yolu + menüde boğuk duyulsun diye alçak geçiren filtre
+func _setup_buses() -> void:
+	for nm in ["SFX", "Engine"]:
+		var i := AudioServer.bus_count
+		AudioServer.add_bus(i)
+		AudioServer.set_bus_name(i, nm)
+		AudioServer.set_bus_send(i, "Master")
+
+
+## Ses ayarları (0..1): genel, müzik, efekt, motor
+func _apply_volumes() -> void:
+	var v: Dictionary = save.vol
+	for pair in [["Master", "master"], ["SFX", "sfx"], ["Engine", "engine"]]:
+		var i := AudioServer.get_bus_index(pair[0])
+		var x: float = v.get(pair[1], 1.0)
+		AudioServer.set_bus_volume_db(i, linear_to_db(maxf(x, 0.001)))
+		AudioServer.set_bus_mute(i, x < 0.01)
+	var mi := AudioServer.get_bus_index("Music")
+	var mx: float = v.get("music", 1.0)
+	AudioServer.set_bus_volume_db(mi, (-11.0 if music_muffled else -9.0) + linear_to_db(maxf(mx, 0.001)))
+	AudioServer.set_bus_mute(mi, mx < 0.01)
+
+
 func _setup_music() -> void:
 	var idx := AudioServer.bus_count
 	AudioServer.add_bus(idx)
@@ -257,23 +293,26 @@ func _setup_music() -> void:
 func _music_muffled(on: bool) -> void:
 	var idx := AudioServer.get_bus_index("Music")
 	AudioServer.set_bus_effect_enabled(idx, 0, on)
-	AudioServer.set_bus_volume_db(idx, -11.0 if on else -9.0)
+	music_muffled = on
+	_apply_volumes()
 
 
 func _add_sfx(id: String, stream: AudioStream) -> void:
 	var p := AudioStreamPlayer.new()
 	p.stream = stream
 	p.max_polyphony = 3
+	p.bus = "SFX"
 	add_child(p)
 	sfx[id] = p
 
 
-func _looping(path: String, db: float) -> AudioStreamPlayer:
+func _looping(path: String, db: float, bus := "SFX") -> AudioStreamPlayer:
 	var st: AudioStreamOggVorbis = load(path).duplicate()
 	st.loop = true
 	var p := AudioStreamPlayer.new()
 	p.stream = st
 	p.volume_db = db
+	p.bus = bus
 	add_child(p)
 	return p
 
@@ -466,10 +505,13 @@ func _apply_quality() -> void:
 	world_env.sky.process_mode = Sky.PROCESS_MODE_QUALITY if q == 2 else Sky.PROCESS_MODE_INCREMENTAL
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = [DirectionalLight3D.SHADOW_ORTHOGONAL, DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS][q]
-	sun.directional_shadow_max_distance = [45.0, 110.0, 220.0][q]
+	sun.directional_shadow_max_distance = [45.0, 100.0, 150.0][q]
 	RenderingServer.directional_shadow_atlas_set_size([1024, 2048, 4096][q], true)
-	RenderingServer.directional_soft_shadow_filter_set_quality([RenderingServer.SHADOW_QUALITY_HARD, RenderingServer.SHADOW_QUALITY_SOFT_LOW, RenderingServer.SHADOW_QUALITY_SOFT_HIGH][q])
-	Engine.physics_ticks_per_second = [60, 90, 120][q]
+	RenderingServer.directional_soft_shadow_filter_set_quality([RenderingServer.SHADOW_QUALITY_HARD, RenderingServer.SHADOW_QUALITY_SOFT_LOW, RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM][q])
+	# Fizik adımı ekran yenileme hızıyla eşleşir (kare başına tam 1 adım = takılmasız akıcı hareket)
+	var hz := roundi(DisplayServer.screen_get_refresh_rate())
+	if OS.has_feature("mobile") or hz < 60 or hz > 165: hz = 60
+	Engine.physics_ticks_per_second = hz
 	Engine.max_physics_steps_per_frame = 6
 	if camera: camera.far = [600.0, 1000.0, 1500.0][q]
 
@@ -510,11 +552,35 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 			for wm in (w.pivot as Node).find_children("*", "MeshInstance3D", true, false):
 				(wm as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if not is_player:
+		# Rakip: yakında tam model, uzakta (FAR_D sonrası) tek çizim çağrılı renkli kopya
+		var far_d: float = [45.0, 60.0, 95.0][quality]
+		var shadow_proxy: MeshInstance3D = null
 		for mi in model.find_children("*", "MeshInstance3D", true, false):
 			var gm := mi as MeshInstance3D
-			gm.visibility_range_end = [220.0, 400.0, 0.0][quality]
-			if gm.name != "ShadowProxy": gm.lod_bias = [0.3, 0.45, 1.0][quality]
-			if quality == 0 and gm.name == "ShadowProxy": gm.visible = false
+			if gm.name == "ShadowProxy":
+				shadow_proxy = gm
+				gm.visibility_range_end = [0.0, 110.0, 160.0][quality]
+				if quality == 0: gm.visible = false
+				continue
+			gm.visibility_range_end = far_d
+			gm.lod_bias = [0.3, 0.45, 1.0][quality]
+		if shadow_proxy:
+			if far_mat == null:
+				far_mat = ShaderMaterial.new()
+				far_mat.shader = load("res://scripts/far_car.gdshader")
+			var fm := MeshInstance3D.new()
+			fm.name = "FarBody"
+			fm.mesh = shadow_proxy.mesh
+			fm.material_override = far_mat
+			fm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			fm.visibility_range_begin = far_d
+			fm.visibility_range_end = [300.0, 500.0, 0.0][quality]
+			fm.lod_bias = 0.5
+			if MODELS[model_id].paint or look.has("paint"):
+				fm.set_instance_shader_parameter("paint", col)
+				fm.set_instance_shader_parameter("paint_on", 1.0)
+			shadow_proxy.get_parent().add_child(fm)
+			fm.transform = shadow_proxy.transform
 	var tune: Dictionary = info.get("tune", {})
 	for k in tune: body.set(k, tune[k])
 	var flames: Array = []
@@ -559,6 +625,7 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 		eng.doppler_tracking = AudioStreamPlayer3D.DOPPLER_TRACKING_PHYSICS_STEP
 		eng.panning_strength = 1.3
 		eng.name = "EngineSound"
+		eng.bus = "Engine"
 		eng.set_meta("base", randf_range(0.88, 1.12))
 		body.add_child(eng)
 	car_seq += 1
@@ -708,9 +775,18 @@ func _split_wheels(model: Node3D, model_id: String) -> void:
 		var wr: Resource = load(BAKE_DIR + model_id + "_wheels.res")
 		cached = wr.get_meta("wheels")
 	var groups := {}   # köşe -> {mat -> [verts, norms, uvs, idx]}
+	var only: String = MODELS[model_id].get("split_only", "")
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		if m.mesh == null or not m.is_visible_in_tree(): continue
+		if only != "":
+			# Alçak araçlarda gövde parçaları da tekerlek boyutuna uyuyor: sadece tekerlek düğümünü böl
+			var under := false
+			var n: Node = m
+			while n != null and n != model:
+				if String(n.name) == only: under = true
+				n = n.get_parent()
+			if not under: continue
 		var xf: Transform3D = to_body * m.global_transform
 		var b: AABB = xf * m.get_aabb()
 		var sz := b.size
@@ -799,6 +875,105 @@ func _split_wheels(model: Node3D, model_id: String) -> void:
 		wheel.add_child(mi2)
 
 
+## Tüm görünür parçaları (gövde + tekerlekler, iç mekân hariç) tek yüzeyde birleştirir;
+## her malzemenin ortalama rengi köşe rengine yazılır (boyalı yüzeylerde alfa = 0).
+func _build_far(model: Node3D, model_id: String) -> ArrayMesh:
+	var inv := model.global_transform.affine_inverse()
+	var pm: Dictionary = MODELS[model_id].get("pm", {})
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var cols := PackedColorArray()
+	var idxs := PackedInt32Array()
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null or not m.is_visible_in_tree() or m.name == "MergedBody" or m.name == "ShadowProxy": continue
+		var xf: Transform3D = inv * m.global_transform
+		for si in m.mesh.get_surface_count():
+			var mat: Material = m.get_active_material(si)
+			var mn := mat.resource_name.to_lower() if mat else ""
+			var skip := false
+			for w in INTERIOR_MATS:
+				if mn.contains(w): skip = true
+			if skip: continue
+			var col := _mat_color(mat)
+			if (mn.contains("glass") or mn.contains("window")) and not (mn.contains("light") or mn.contains("red") or mn.contains("orange")):
+				col = Color(0.03, 0.035, 0.045)
+			if mat and (mat.resource_name.begins_with("Paint") or pm.has(mat.resource_name)): col.a = 0.0
+			var arr := m.mesh.surface_get_arrays(si)
+			var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var nrm = arr[Mesh.ARRAY_NORMAL]
+			var ix = arr[Mesh.ARRAY_INDEX]
+			var base := verts.size()
+			for k in v.size():
+				verts.append(xf * v[k])
+				norms.append((xf.basis * (nrm[k] if nrm != null and nrm.size() > k else Vector3.UP)).normalized())
+				cols.append(col)
+			if ix == null or ix.size() == 0:
+				for k in v.size(): idxs.append(base + k)
+			else:
+				for k in ix: idxs.append(base + k)
+	var arrs := []
+	arrs.resize(Mesh.ARRAY_MAX)
+	arrs[Mesh.ARRAY_VERTEX] = verts
+	arrs[Mesh.ARRAY_NORMAL] = norms
+	arrs[Mesh.ARRAY_COLOR] = cols
+	arrs[Mesh.ARRAY_INDEX] = idxs
+	var im := ImporterMesh.new()
+	im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arrs)
+	im.generate_lods(30.0, 60.0, [])
+	# Uzakta/gölgede kullanılır: taban olarak ~%15 üçgenli sadeleştirilmiş seviyeyi al, köşeleri sıkıştır
+	var sa := im.get_surface_arrays(0)
+	verts = sa[Mesh.ARRAY_VERTEX]
+	norms = sa[Mesh.ARRAY_NORMAL]
+	cols = sa[Mesh.ARRAY_COLOR]
+	idxs = sa[Mesh.ARRAY_INDEX]
+	var use := idxs
+	for li in im.get_surface_lod_count(0):
+		var li_idx := im.get_surface_lod_indices(0, li)
+		use = li_idx
+		if li_idx.size() < idxs.size() * 0.15: break
+	var remap := {}
+	var v2 := PackedVector3Array()
+	var n2 := PackedVector3Array()
+	var c2 := PackedColorArray()
+	var i2 := PackedInt32Array()
+	for k in use:
+		if not remap.has(k):
+			remap[k] = v2.size()
+			v2.append(verts[k])
+			n2.append(norms[k])
+			c2.append(cols[k])
+		i2.append(remap[k])
+	arrs[Mesh.ARRAY_VERTEX] = v2
+	arrs[Mesh.ARRAY_NORMAL] = n2
+	arrs[Mesh.ARRAY_COLOR] = c2
+	arrs[Mesh.ARRAY_INDEX] = i2
+	var im2 := ImporterMesh.new()
+	im2.add_surface(Mesh.PRIMITIVE_TRIANGLES, arrs)
+	im2.generate_lods(30.0, 60.0, [])
+	return im2.get_mesh()
+
+
+func _mat_color(mat: Material) -> Color:
+	if not (mat is BaseMaterial3D): return Color(0.5, 0.5, 0.5)
+	if mat_color_cache.has(mat): return mat_color_cache[mat]
+	var bm := mat as BaseMaterial3D
+	var c := bm.albedo_color
+	if bm.albedo_texture:
+		var img := bm.albedo_texture.get_image()
+		if img:
+			if img.is_compressed(): img.decompress()
+			img.resize(8, 8, Image.INTERPOLATE_BILINEAR)
+			var acc := Color(0, 0, 0, 0)
+			for y in 8:
+				for x in 8: acc += img.get_pixel(x, y)
+			acc /= 64.0
+			c = Color(c.r * acc.r, c.g * acc.g, c.b * acc.b, 1.0)
+	c.a = 1.0
+	mat_color_cache[mat] = c
+	return c
+
+
 ## Uzak mesafe için otomatik LOD seviyeleri üretir (derlemede bir kez: assets/baked/)
 func _lod_mesh(src: ArrayMesh) -> ArrayMesh:
 	var im := ImporterMesh.new()
@@ -859,17 +1034,25 @@ func _merge_body(model: Node3D, pattern: String, cache_key: String) -> void:
 		if not MODELS[cache_key].get("nolod", false): mesh = _lod_mesh(mesh)
 		if OS.get_environment("BAKE") != "": ResourceSaver.save(mesh, baked, ResourceSaver.FLAG_COMPRESS)
 	merged_cache[cache_key] = mesh
+	# Uzak/gölge kopyası: tüm parçalar (tekerlekler dahil) tek yüzeyde, renkler köşe renginde
+	var far: ArrayMesh = far_cache.get(cache_key)
+	var far_path := BAKE_DIR + cache_key + "_far.res"
+	if far == null and ResourceLoader.exists(far_path): far = load(far_path)
+	if far == null:
+		far = _build_far(model, cache_key)
+		if OS.get_environment("BAKE") != "": ResourceSaver.save(far, far_path, ResourceSaver.FLAG_COMPRESS)
+	far_cache[cache_key] = far
 	var merged := MeshInstance3D.new()
 	merged.mesh = mesh
 	merged.name = "MergedBody"
 	merged.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	model.add_child(merged)
-	# Gölge için aynı mesh'in kaba LOD'u (gölge geçişinde tam detay gereksiz)
+	# Gölge: tek yüzeyli kopya (her gölge bölmesinde araç başına 1 çizim çağrısı)
 	var sh := MeshInstance3D.new()
-	sh.mesh = mesh
+	sh.mesh = far
 	sh.name = "ShadowProxy"
 	sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
-	sh.lod_bias = 0.08
+	sh.lod_bias = 0.25
 	model.add_child(sh)
 	# Düğümleri silme: bazı modellerde tekerlekler gövde parçasının alt düğümü (ör. Aurora)
 	for m in parts: m.mesh = null
@@ -1265,6 +1448,7 @@ func _slowmo(scale: float, seconds: float) -> void:
 
 func _recover(car: Dictionary) -> void:
 	if debug_log: print("  KURTARMA ", car.name, " model=", car.model_id, " yükseklik=", snappedf(car.body.global_position.y - track.point(car.s).y, 0.1), " hız=", int(car.body.speed * 3.6), " zemin=", car.body.on_ground, " s=", int(fposmod(car.s, track.length)), " x=", snappedf(car.x, 0.1), " flip=", snappedf(car.flip, 0.1), " stuck=", snappedf(car.stuck, 0.1), " wrong=", snappedf(car.wrong, 0.1))
+	car.recovers = car.get("recovers", 0) + 1
 	var s: float = car.s
 	var x: float = clampf(car.x, -Track.HALF + 2.5, Track.HALF - 2.5)
 	car.body.place(track.point(s, x), track.tangent(s), clampf(car.body.speed, 15.0, 30.0))
@@ -1430,8 +1614,17 @@ func _start_race() -> void:
 	_pop(big_label)
 
 
+var prof := {}
+
+
 func _physics_process(delta: float) -> void:
 	if state != State.RACE and state != State.FINISHED: return
+	var _t0 := Time.get_ticks_usec()
+	_race_tick(delta)
+	prof["main"] = prof.get("main", 0) + Time.get_ticks_usec() - _t0
+
+
+func _race_tick(delta: float) -> void:
 	tick += 1
 	var check := tick % 6 == 0       # sıralama/olay kontrolleri her 6 adımda bir (pahalı sıralama)
 	var ranks_before := _ranks() if check else {}
@@ -1454,16 +1647,17 @@ func _process(delta: float) -> void:
 	if track and track.crowd_mat: track.crowd_mat.set_shader_parameter("cheer", cheer)
 	match state:
 		State.MENU:
+			if warming: return
 			# Garaj: araç döner platformda yavaşça döner, kamera hafifçe salınır
 			menu_angle += delta
 			garage_angle += delta * 0.22
 			garage.turntable.rotation.y = garage_angle
 			player.body.global_transform = Transform3D(Basis(Vector3.UP, garage_angle), garage.center)
 			var c: Vector3 = garage.center
-			var a := 0.55 + sin(menu_angle * 0.12) * 0.25
-			camera.position = c + Vector3(sin(a) * 7.6, 1.85 + sin(menu_angle * 0.2) * 0.15, cos(a) * 7.6)
-			camera.look_at(c + Vector3(0, 0.55, 0))
-			camera.fov = 48
+			var a := 0.45 + sin(menu_angle * 0.12) * 0.2
+			camera.position = c + Vector3(sin(a) * 9.4, 2.4 + sin(menu_angle * 0.2) * 0.12, cos(a) * 9.4)
+			camera.look_at(c + Vector3(0, 0.9, 0))
+			camera.fov = 44
 			return
 		State.COUNTDOWN:
 			var before := ceili(countdown)
@@ -1975,10 +2169,10 @@ func _build_ui() -> void:
 	mod_button.size = Vector2(280, 130)
 	var sl2 := _label("AYARLAR", 18, up_p, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
 	sl2.position = Vector2(20, 190)
-	quality_button = _button("", up_p, _cycle_quality)
-	quality_button.add_theme_font_size_override("font_size", 20)
-	quality_button.position = Vector2(20, 222)
-	quality_button.size = Vector2(280, 58)
+	var set_b := _button("SES · GRAFİK", up_p, _show_settings.bind(true))
+	set_b.add_theme_font_size_override("font_size", 22)
+	set_b.position = Vector2(20, 222)
+	set_b.size = Vector2(280, 58)
 	buy_button = _button("YARIŞ!", menu, _on_main_button)
 	buy_button.add_theme_font_size_override("font_size", 40)
 	_box(buy_button, 0.5, 1, 0, -70, 380, 86)
@@ -2049,12 +2243,73 @@ func _build_ui() -> void:
 	var pt := _label("DURAKLATILDI", 56, pause_menu, Color.WHITE)
 	_box(pt, 0.5, 0.25, 0, 0, 700, 80)
 	var b1 := _button("DEVAM", pause_menu, _toggle_pause)
-	_box(b1, 0.5, 0.45, 0, 0, 340, 76)
+	_box(b1, 0.5, 0.4, 0, 0, 340, 72)
 	var b2 := _button("YENİDEN BAŞLAT", pause_menu, func(): _toggle_pause(); _start_race())
-	_box(b2, 0.5, 0.6, 0, 0, 340, 70)
+	_box(b2, 0.5, 0.53, 0, 0, 340, 66)
+	var b4 := _button("SES · GRAFİK", pause_menu, _show_settings.bind(true))
+	_box(b4, 0.5, 0.66, 0, 0, 340, 66)
 	var b3 := _button("GARAJ", pause_menu, func(): _toggle_pause(); _go_menu())
-	_box(b3, 0.5, 0.75, 0, 0, 340, 70)
+	_box(b3, 0.5, 0.79, 0, 0, 340, 66)
 	pause_menu.visible = false
+
+	# --- Ayarlar (ses + grafik), menüden ve duraklatmadan açılır
+	settings_menu = Control.new()
+	_full(settings_menu)
+	root.add_child(settings_menu)
+	var sdim := ColorRect.new()
+	sdim.color = Color(0, 0, 0, 0.7)
+	_full(sdim)
+	sdim.mouse_filter = Control.MOUSE_FILTER_STOP
+	settings_menu.add_child(sdim)
+	var sp := _panel(settings_menu, Color(0.05, 0.05, 0.06, 0.92))
+	_box(sp, 0.5, 0.5, 0, 0, 640, 560)
+	var stl := _label("AYARLAR", 34, sp, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	stl.position = Vector2(30, 16)
+	var sy := 80.0
+	var kimg := Image.create(34, 34, false, Image.FORMAT_RGBA8)
+	for ky in 34:
+		for kx in 34:
+			var dd := Vector2(kx - 16.5, ky - 16.5).length()
+			kimg.set_pixel(kx, ky, Color(1, 1, 1, clampf(16.0 - dd, 0.0, 1.0)) if dd > 11.0 else Color(ACCENT_2.r, ACCENT_2.g, ACCENT_2.b, 1.0))
+	var knob := ImageTexture.create_from_image(kimg)
+	for item in [["master", "GENEL SES"], ["music", "MÜZİK"], ["sfx", "EFEKTLER"], ["engine", "MOTOR SESİ"]]:
+		var l := _label(item[1], 22, sp, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+		l.position = Vector2(30, sy)
+		var pct := _label("", 22, sp, ACCENT_2, HORIZONTAL_ALIGNMENT_RIGHT)
+		pct.position = Vector2(510, sy)
+		pct.size = Vector2(100, 30)
+		vol_labels[item[0]] = pct
+		var vsl := HSlider.new()
+		vsl.min_value = 0.0
+		vsl.max_value = 1.0
+		vsl.step = 0.05
+		vsl.value = float(save.vol.get(item[0], 1.0))
+		vsl.position = Vector2(30, sy + 34)
+		vsl.size = Vector2(580, 36)
+		var track_sb := _flat(Color(1, 1, 1, 0.18), 6)
+		track_sb.content_margin_top = 7
+		track_sb.content_margin_bottom = 7
+		var fill_sb := _flat(ACCENT, 6)
+		fill_sb.content_margin_top = 7
+		fill_sb.content_margin_bottom = 7
+		vsl.add_theme_stylebox_override("slider", track_sb)
+		vsl.add_theme_stylebox_override("grabber_area", fill_sb)
+		vsl.add_theme_stylebox_override("grabber_area_highlight", fill_sb)
+		vsl.add_theme_icon_override("grabber", knob)
+		vsl.add_theme_icon_override("grabber_highlight", knob)
+		vsl.value_changed.connect(_on_volume.bind(item[0]))
+		sp.add_child(vsl)
+		sy += 88.0
+	quality_button = _button("", sp, _cycle_quality)
+	quality_button.add_theme_font_size_override("font_size", 22)
+	quality_button.position = Vector2(30, sy + 4)
+	quality_button.size = Vector2(280, 60)
+	var close := _button("KAPAT", sp, _show_settings.bind(false))
+	close.add_theme_font_size_override("font_size", 26)
+	close.position = Vector2(330, sy + 4)
+	close.size = Vector2(280, 60)
+	settings_menu.visible = false
+	_refresh_volume_labels()
 
 	# --- Yarış sonu: sıralama tablosu
 	over = Control.new()
@@ -2117,6 +2372,23 @@ func _zone(parent: Control, text: String, ax: float, ay: float, ox: float, oy: f
 	var l := _label(text, 26 if text.length() > 2 else 58, p)
 	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	return p
+
+
+func _on_volume(v: float, key: String) -> void:
+	save.vol[key] = v
+	_apply_volumes()
+	_refresh_volume_labels()
+
+
+func _refresh_volume_labels() -> void:
+	for k in vol_labels: vol_labels[k].text = "%d%%" % int(round(float(save.vol.get(k, 1.0)) * 100.0))
+
+
+func _show_settings(on: bool) -> void:
+	settings_menu.visible = on
+	if quality_button: quality_button.text = "GRAFİK: %s" % ["DÜŞÜK", "ORTA", "YÜKSEK"][quality]
+	if not on: _write_save()
+	if sfx.has("click"): sfx.click.play()
 
 
 func _toggle_pause() -> void:
@@ -2272,6 +2544,8 @@ func _result_row(a: String, b: String, c: String, col: Color, hl: bool) -> Contr
 ## Açılışta tüm araç malzemelerini ve efektleri bir kez çizdirerek shader derleme takılmalarını önler.
 func _warmup() -> void:
 	loading.visible = true
+	warming = true
+	_garage_mode(false)
 	var temp: Array = []
 	var origin := track.point(-40.0, 0.0)
 	var fwd := track.tangent(-40.0)
@@ -2291,7 +2565,13 @@ func _warmup() -> void:
 		i += 1
 	camera.global_position = origin - fwd * 12.0 + Vector3.UP * 4.0
 	camera.look_at(origin + fwd * 6.0)
-	for k in 4: await get_tree().process_frame
+	for k in 3: await get_tree().process_frame
+	# Uzak araç kopyaları ve uzak arazi de derlensin
+	camera.global_position = origin - fwd * 130.0 + Vector3.UP * 12.0
+	camera.look_at(origin)
+	for k in 3: await get_tree().process_frame
+	warming = false
+	if state == State.MENU: _garage_mode(true)
 	for c in temp:
 		c.body.queue_free()
 		c.sparks.queue_free()

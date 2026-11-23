@@ -606,6 +606,7 @@ func _build_terrain() -> void:
 				tmi.material_override = mat
 				tmi.visibility_range_begin = ranges[li][0]
 				tmi.visibility_range_end = ranges[li][1]
+				if li > 0: tmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # gölge mesafesinin dışında
 				add_child(tmi)
 
 
@@ -980,4 +981,5 @@ func _build_stands() -> void:
 	amb.volume_db = -4.0
 	amb.position = stands_center + Vector3(0, 4, 0)
 	amb.autoplay = true
+	amb.bus = "SFX"
 	add_child(amb)

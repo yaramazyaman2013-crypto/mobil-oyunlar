@@ -34,4 +34,8 @@ func _process(_d: float) -> void:
 	if f == 29: g.get_viewport().get_texture().get_image().save_png("res://build/shots/stands.png")
 	if f == 65:
 		g.get_viewport().get_texture().get_image().save_png("res://build/shots/mod_menu.png")
+		g._show_mods(false)
+		g._show_settings(true)
+	if f == 75:
+		g.get_viewport().get_texture().get_image().save_png("res://build/shots/settings.png")
 		get_tree().quit()

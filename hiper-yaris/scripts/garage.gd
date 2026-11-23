@@ -17,15 +17,17 @@ func build(quality: int) -> void:
 	var floor_m := StandardMaterial3D.new()
 	floor_m.albedo_texture = load("res://assets/deco/garage_floor.png")
 	floor_m.uv1_scale = Vector3(6, 6, 1)
-	floor_m.roughness = 0.22
-	floor_m.metallic = 0.15
+	floor_m.albedo_color = Color(0.55, 0.55, 0.58)
+	floor_m.roughness = 0.12
+	floor_m.metallic = 0.2
 	floor_m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	var wall_m := StandardMaterial3D.new()
 	wall_m.albedo_texture = load("res://assets/deco/garage_wall.png")
 	wall_m.uv1_triplanar = true
 	wall_m.uv1_scale = Vector3(0.12, 0.12, 0.12)
-	wall_m.roughness = 0.55
-	wall_m.metallic = 0.5
+	wall_m.albedo_color = Color(0.32, 0.33, 0.36)
+	wall_m.roughness = 0.45
+	wall_m.metallic = 0.6
 	var dark := StandardMaterial3D.new()
 	dark.albedo_color = Color(0.08, 0.085, 0.09)
 	dark.roughness = 0.6
@@ -118,30 +120,35 @@ func build(quality: int) -> void:
 	_box(Vector3(4.6, 0.9, 0.05), Vector3(-5.0, 0.45, -D / 2 + 0.2), dark)
 	_box(Vector3(4.6, 1.2, 0.04), Vector3(-5.0, 1.9, -D / 2 + 0.17), dark)   # alet panosu
 
-	# Duvarda oyun adı ve şirket logosu
-	var title := Label3D.new()
-	title.text = "HİPER YARIŞ"
-	title.font_size = 220
-	title.outline_size = 0
-	title.modulate = ACCENT
-	title.pixel_size = 0.01
-	title.position = Vector3(0, 4.9, -D / 2 + 0.2)
-	title.shaded = false
-	add_child(title)
-	var sub := Label3D.new()
-	sub.text = "GARAJ"
-	sub.font_size = 90
-	sub.modulate = Color(1, 1, 1, 0.85)
-	sub.pixel_size = 0.01
-	sub.position = Vector3(0, 3.75, -D / 2 + 0.2)
-	add_child(sub)
+	# Arka duvar: şirket logosu (ışıklı çerçeve içinde)
 	var logo := Sprite3D.new()
 	logo.texture = load("res://assets/ui/aslan_logo_wall.png")
-	logo.pixel_size = 0.0075
-	logo.position = Vector3(-W / 2 + 0.2, 2.2, 1.5)
-	logo.rotation.y = PI / 2
-	logo.modulate = Color(1, 1, 1, 0.95)
+	logo.pixel_size = 0.0068
+	logo.position = Vector3(0, 4.5, -D / 2 + 0.2)
+	logo.shaded = false
 	add_child(logo)
+	_box(Vector3(4.4, 0.06, 0.05), Vector3(0, 2.6, -D / 2 + 0.18), glow)
+	# Duvarlarda dikey ışık şeritleri (showroom havası)
+	var strip := StandardMaterial3D.new()
+	strip.albedo_color = Color.WHITE
+	strip.emission_enabled = true
+	strip.emission = Color(0.85, 0.92, 1.0)
+	strip.emission_energy_multiplier = 2.2
+	for x in [-9.0, -6.0, -3.5, 3.5, 6.0, 9.0]:
+		_box(Vector3(0.12, H - 1.2, 0.04), Vector3(x, H / 2, -D / 2 + 0.18), strip)
+	for z in [-7.0, -3.5, 0.0, 3.5, 7.0]:
+		for side in [-1.0, 1.0]:
+			_box(Vector3(0.04, H - 1.2, 0.12), Vector3(side * (W / 2 - 0.18), H / 2, z), strip)
+	# Platformun tam üstünde halka ışık
+	var cring := MeshInstance3D.new()
+	var ct := TorusMesh.new()
+	ct.inner_radius = 3.0
+	ct.outer_radius = 3.25
+	ct.rings = 64
+	cring.mesh = ct
+	cring.material_override = panel
+	cring.position = Vector3(0, H - 0.35, 0)
+	add_child(cring)
 
 	# Işıklar: platforma bakan spotlar + genel dolgu
 	for a in [0.0, TAU / 3.0, TAU * 2.0 / 3.0]:

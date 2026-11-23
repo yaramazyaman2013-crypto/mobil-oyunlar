@@ -9,7 +9,7 @@ Gerçekçi grafikli 3D arcade yarış oyunu — Godot 4.3, Forward+ (telefonda M
 - **Yarış atmosferi:** tempolu müzik, basamaklı tribünler (koltuk sıraları, tek tek zıplayan seyirciler, kolonlu çatı, ışık direkleri, bayraklar) ve tezahürat, sponsor afişleri, start ışıkları, rakip motor sesleri, fren izleri, "SON TUR" duyurusu, bitişte konfeti, yüksek hızda hız çizgileri
 - Telefon (yatay): ekranda ◀ ▶, GAZ, FREN, DRİFT, NİTRO butonları
 - Arayüz: mini harita, ilerleme çubuğu, duraklatma menüsü, 10 araçlık sonuç tablosu, araç istatistikli garaj
-- Grafik kalitesi menüden: DÜŞÜK (telefon varsayılanı) / ORTA / YÜKSEK
+- **Ayarlar** (garajda ve duraklatmada "SES · GRAFİK"): genel ses, müzik, efektler, motor sesi kaydırıcıları; grafik kalitesi DÜŞÜK / ORTA (telefon varsayılanı) / YÜKSEK
 - Açılışta Aslan Software logosu
 - **Garaj:** döner platformlu, ışıklı showroom; 10 markasız araç satın alma
 - **Modifiye atölyesi** (araç başına kaydedilir): MOTOR, TURBO/NİTRO, LASTİK, SÜSPANSİYON yükseltmeleri; BOYA (12 renk), NEON alt ışık, CAM FİLMİ, NİTRO ALEVİ rengi
@@ -18,7 +18,8 @@ Gerçekçi grafikli 3D arcade yarış oyunu — Godot 4.3, Forward+ (telefonda M
 - Araç parçaları malzemeye göre tek mesh'te birleştirilir, iç parçalar atılır; gövde ve tekerlekler için derlemede LOD üretilir (`assets/baked/`, `BAKE=1 godot -- --tool=bake`)
 - Görüntü her zaman tam çözünürlükte (çözünürlük düşürme yok) + MSAA kenar yumuşatma; telefonda 60 FPS kilidi
 - Arazi 32x32 hücrelik bölgelere ayrılır, her bölgenin 3 detay seviyesi var (uzak dağlar seyrek)
-- Gölgede araçların kaba LOD'u kullanılır
+- Rakip araçlar uzakta tek çizim çağrılı renkli kopyaya geçer; gölgeler de bu tek parçalı kopyadan atılır
+- Fizik adımı ekran yenileme hızına eşitlenir (takılmasız hareket); menüde pist, yarışta garaj çizilmez
 - Kaya/bitkiler sadeleştirilmiş ve bölgesel MultiMesh ile çizilir
 - Tüm dokular GPU sıkıştırmalı (ETC2/ASTC/S3TC) ve mipmap'li
 - Açılışta shader ısıtma (yarışta ilk kez görülen malzeme takılması olmaz)

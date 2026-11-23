@@ -69,8 +69,17 @@ func setup(wheel_specs: Array, mass_kg: float) -> void:
 	wheels = wheel_specs
 
 
+static var prof_us := 0
+
+
 func _physics_process(delta: float) -> void:
 	if freeze: return
+	var _t0 := Time.get_ticks_usec()
+	_sim(delta)
+	prof_us += Time.get_ticks_usec() - _t0
+
+
+func _sim(delta: float) -> void:
 	var space := get_world_3d().direct_space_state
 	var up := global_basis.y.normalized()
 	var fwd := global_basis.z.normalized()
