@@ -10,10 +10,13 @@ Gerçekçi grafikli 3D arcade yarış oyunu — Godot 4.3, Forward+ (telefonda M
 - Telefon (yatay): ekranda ◀ ▶, GAZ, FREN, DRİFT, NİTRO butonları
 - Arayüz: mini harita, ilerleme çubuğu, duraklatma menüsü, 10 araçlık sonuç tablosu, araç istatistikli garaj
 - Grafik kalitesi menüden: DÜŞÜK (telefon varsayılanı) / ORTA / YÜKSEK
-- Garaj: araç/renk satın alma, motor ve nitro yükseltmeleri
+- Garaj: 10 araç satın alma
+- **Modifiye atölyesi** (araç başına kaydedilir): MOTOR, TURBO/NİTRO, LASTİK, SÜSPANSİYON yükseltmeleri; BOYA (12 renk), NEON alt ışık, CAM FİLMİ, NİTRO ALEVİ rengi
 
 ## Performans
-- Araç parçaları malzemeye göre tek mesh'te birleştirilir, iç parçalar gizlenir
+- Araç parçaları malzemeye göre tek mesh'te birleştirilir, iç parçalar atılır; gövde ve tekerlekler için derlemede LOD üretilir (`assets/baked/`, `BAKE=1 godot -- --tool=bake`)
+- Dinamik çözünürlük: kare süresine göre 3B çözünürlük ayarlanır (60 FPS hedefi); telefonda 60 FPS kilidi
+- Gölgede araçların kaba LOD'u kullanılır
 - Kaya/bitkiler sadeleştirilmiş ve bölgesel MultiMesh ile çizilir
 - Tüm dokular GPU sıkıştırmalı (ETC2/ASTC/S3TC) ve mipmap'li
 - Açılışta shader ısıtma (yarışta ilk kez görülen malzeme takılması olmaz)
@@ -25,8 +28,7 @@ Gerçekçi grafikli 3D arcade yarış oyunu — Godot 4.3, Forward+ (telefonda M
 ## Varlıklar ve lisanslar
 - Araç: *CarConcept* — Eric Chadwick / Darmstadt Graphics Group, **CC BY 4.0** (Khronos glTF Sample Assets)
 - Araç: *Fictional supercar – V12 Goblin* — Olli Teittinen (ollitei), **CC BY 4.0** (Sketchfab)
-- Araç: *Generic Sport Car Low Poly* ve *Sport Car Low Poly* — Han66st, **CC BY 4.0** (Sketchfab)
-- Araç: *Saba V12 '95*, *Cheetah '84*, *Exterminator '00* — Daniel Zhabotinsky, **CC BY 4.0** (Sketchfab)
+- Araçlar: *Aspark Owl 2020, Jaguar XJ220 1991, A110 GT4, Mitsubishi Lancer Evolution 6, Deus Vayanne Concept 2022, Italdesign Zerouno 2017, BMW M8 GTE, Porsche 919 Hybrid Evo* — vecarz (heynic), **CC BY 4.0** (Sketchfab; oyunda kurgusal adlarla). Gerçek marka tasarımlarıdır: mağazada yayından önce bkz. `assets/CREDITS.md`
 - Bitkiler: **Poly Haven**, CC0 (oyun için `tools/optimize_env.py` ile sadeleştirildi)
 - Kayalar, dokular, gökyüzü (HDRI): **Poly Haven**, CC0
 - Fizik motoru: [Godot Jolt](https://github.com/godot-jolt/godot-jolt) (MIT)

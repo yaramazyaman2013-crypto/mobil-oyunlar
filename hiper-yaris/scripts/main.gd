@@ -19,49 +19,55 @@ const TRACK_POINTS := [
 ## yaw: modelin önünü +Z'ye çeviren açı. keep: sadece bu düğümleri göster. wheels: tekerlek düğümü deseni.
 const MODELS := {
 	"concept": {"path": "res://assets/real/cars/CarConcept.glb", "yaw": 0.0, "keep": [], "wheels": "Wheel*", "paint": true},
-	"goblin": {"path": "res://assets/real/cars/goblin.glb", "yaw": PI, "keep": [], "wheels": "bone_rotation_*", "paint": true},
-	"sport_a": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_4"], "wheels": "mc-wheel*", "paint": false},
-	"sport_b": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_001_9"], "wheels": "mc-wheel*", "paint": false},
-	"sport_c": {"path": "res://assets/real/cars/sport.glb", "yaw": -PI / 2.0, "keep": ["mc_Body_002_14"], "wheels": "mc-wheel*", "paint": false},
-	"furia_a": {"path": "res://assets/real/cars/sport2.glb", "yaw": 0.0, "keep": ["glr-body_4"], "wheels": "glr-wheel*", "paint": false},
-	"furia_b": {"path": "res://assets/real/cars/sport2.glb", "yaw": 0.0, "keep": ["glr-body_001_9"], "wheels": "glr-wheel*", "paint": false},
-	"furia_c": {"path": "res://assets/real/cars/sport2.glb", "yaw": 0.0, "keep": ["glr-body_002_14"], "wheels": "glr-wheel*", "paint": false},
-	"saba": {"path": "res://assets/real/cars/saba.glb", "yaw": -PI / 2.0, "keep": [], "wheels": "*WheelStock_*", "paint": false},
-	"cheetah": {"path": "res://assets/real/cars/cheetah.glb", "yaw": -PI / 2.0, "keep": [], "wheels": "*WheelStock_*", "paint": false},
-	"exterminator": {"path": "res://assets/real/cars/exterminator.glb", "yaw": -PI / 2.0, "keep": [], "wheels": "*WheelsStock_*", "paint": false},
+	"goblin": {"nolod": true, "path": "res://assets/real/cars/goblin.glb", "yaw": PI, "keep": [], "wheels": "bone_rotation_*", "paint": true},
+	"evo6": {"pm": {"material": "replace"}, "path": "res://assets/real/cars/evo6.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"a110": {"pm": {"A110_GT4_Ext_Paint_13": "replace", "A110_GT4_Ext_Paint": "replace"}, "path": "res://assets/real/cars/a110.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"xj220": {"pm": {"body": "tint"}, "path": "res://assets/real/cars/xj220.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"vayanne": {"pm": {"carPaint": "tint"}, "path": "res://assets/real/cars/vayanne.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"zerouno": {"pm": {"car_italdesign_zeruno_occ": "tint"}, "path": "res://assets/real/cars/zerouno.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"owl": {"pm": {"Body": "tint"}, "path": "res://assets/real/cars/owl.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"m8gte": {"pm": {"Material.001": "replace"}, "path": "res://assets/real/cars/m8gte.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
+	"lmp919": {"pm": {".003": "replace"}, "path": "res://assets/real/cars/lmp919.glb", "yaw": 0.0, "keep": [], "wheels": "WheelSplit_*", "split": true, "paint": false},
 }
 const GARAGE := [
-	{"name": "AURORA  •  BUZ MAVİSİ", "model": "concept", "color": Color(0.05, 0.3, 0.85), "price": 0},
-	{"name": "CHEETAH '84  •  KIRMIZI", "model": "cheetah", "color": Color.WHITE, "price": 150},
-	{"name": "STRADA GT  •  TURUNCU", "model": "sport_b", "color": Color.WHITE, "price": 250},
-	{"name": "EXTERMINATOR  •  TUNING", "model": "exterminator", "color": Color.WHITE, "price": 350},
-	{"name": "FURIA GT  •  YEŞİL", "model": "furia_a", "color": Color.WHITE, "price": 450},
-	{"name": "GOBLIN V12  •  ZEHİR YEŞİLİ", "model": "goblin", "color": Color(0.2, 0.7, 0.05), "price": 600},
-	{"name": "SABA V12  •  SARI", "model": "saba", "color": Color.WHITE, "price": 750},
-	{"name": "STRADA GT  •  KARBON", "model": "sport_a", "color": Color.WHITE, "price": 900},
-	{"name": "FURIA GT  •  BEYAZ", "model": "furia_b", "color": Color.WHITE, "price": 1050},
-	{"name": "AURORA  •  YARIŞ KIRMIZISI", "model": "concept", "color": Color(0.75, 0.04, 0.04), "price": 1200},
-	{"name": "GOBLIN V12  •  GECE SİYAHI", "model": "goblin", "color": Color(0.025, 0.025, 0.03), "price": 1400},
-	{"name": "FURIA GT  •  SARI", "model": "furia_c", "color": Color.WHITE, "price": 1600},
+	{"name": "AURORA", "model": "concept", "color": Color(0.05, 0.3, 0.85), "price": 0},
+	{"name": "SAMURAY R6", "model": "evo6", "color": Color.WHITE, "price": 150},
+	{"name": "ALPİN GT4", "model": "a110", "color": Color.WHITE, "price": 300},
+	{"name": "KEDİ 220", "model": "xj220", "color": Color.WHITE, "price": 450},
+	{"name": "DEUS V", "model": "vayanne", "color": Color.WHITE, "price": 600},
+	{"name": "ZERO GT", "model": "zerouno", "color": Color.WHITE, "price": 750},
+	{"name": "GOBLIN V12", "model": "goblin", "color": Color(0.2, 0.7, 0.05), "price": 900},
+	{"name": "BAYKUŞ HİPER", "model": "owl", "color": Color.WHITE, "price": 1100},
+	{"name": "M-GTE YARIŞ", "model": "m8gte", "color": Color.WHITE, "price": 1300},
+	{"name": "LMP HİBRİT", "model": "lmp919", "color": Color.WHITE, "price": 1600},
 ]
 const RIVALS := [
 	{"name": "KARTAL", "model": "goblin", "color": Color(0.03, 0.03, 0.035)},
-	{"name": "ŞAHİN", "model": "sport_c", "color": Color.WHITE},
-	{"name": "KURT", "model": "saba", "color": Color.WHITE},
+	{"name": "ŞAHİN", "model": "zerouno", "color": Color.WHITE},
+	{"name": "KURT", "model": "xj220", "color": Color.WHITE},
 	{"name": "TİLKİ", "model": "concept", "color": Color(0.6, 0.05, 0.08)},
-	{"name": "ŞİMŞEK", "model": "sport_b", "color": Color.WHITE},
-	{"name": "BORA", "model": "goblin", "color": Color(0.9, 0.5, 0.02)},
-	{"name": "POYRAZ", "model": "cheetah", "color": Color.WHITE},
-	{"name": "ATMACA", "model": "exterminator", "color": Color.WHITE},
-	{"name": "PARS", "model": "furia_a", "color": Color.WHITE},
-	{"name": "VAŞAK", "model": "furia_b", "color": Color.WHITE},
-	{"name": "KAPLAN", "model": "concept", "color": Color(0.85, 0.85, 0.83)},
-	{"name": "YILDIRIM", "model": "furia_c", "color": Color.WHITE},
+	{"name": "ŞİMŞEK", "model": "a110", "color": Color.WHITE},
+	{"name": "BORA", "model": "owl", "color": Color.WHITE},
+	{"name": "POYRAZ", "model": "evo6", "color": Color.WHITE},
+	{"name": "ATMACA", "model": "m8gte", "color": Color.WHITE},
+	{"name": "PARS", "model": "vayanne", "color": Color.WHITE},
+	{"name": "VAŞAK", "model": "lmp919", "color": Color.WHITE},
+	{"name": "KAPLAN", "model": "goblin", "color": Color(0.9, 0.5, 0.02)},
+	{"name": "YILDIRIM", "model": "concept", "color": Color(0.85, 0.85, 0.83)},
 ]
 const CAR_COUNT := 10
 const CRASH_DV := 16.0   # bir fizik adımında bu kadar m/s hız değişimi = kaza
 const PRIZES := [400, 280, 200, 150, 110, 80, 60, 40, 30, 20]
-const UPGRADE_COST := [200, 400, 700, 1100, 1600]
+const INTERIOR_MATS := ["int1", "_int_", "cpit", "leather", "interior", "stwheel", "alcantara", "dashboard"]
+const BAKE_DIR := "res://assets/baked/"
+const MOD_COST := [150, 300, 500, 800, 1200]
+const PERF_MODS := [["motor", "MOTOR", "+20 kW güç"], ["nitro", "TURBO / NİTRO", "Daha güçlü, uzun nitro"], ["tire", "LASTİK", "+%3 yol tutuşu"], ["susp", "SÜSPANSİYON", "Alçak, sert, çevik"]]
+const LOOK_MODS := [["paint", "BOYA"], ["neon", "NEON"], ["tint", "CAM FİLMİ"], ["flame", "NİTRO ALEVİ"]]
+const PAINTS := [["FABRİKA", Color(0, 0, 0, 0)], ["ATEŞ KIRMIZI", Color(0.62, 0.02, 0.03)], ["GECE SİYAHI", Color(0.02, 0.02, 0.025)], ["İNCİ BEYAZ", Color(0.88, 0.88, 0.86)], ["GÜMÜŞ", Color(0.5, 0.52, 0.55)], ["OKYANUS MAVİSİ", Color(0.02, 0.14, 0.55)], ["ZEHİR YEŞİLİ", Color(0.22, 0.7, 0.04)], ["GÜNEŞ SARISI", Color(0.95, 0.68, 0.02)], ["TURUNCU", Color(0.95, 0.32, 0.02)], ["GECE MORU", Color(0.25, 0.04, 0.45)], ["FUŞYA", Color(0.85, 0.12, 0.45)], ["MAT GRİ", Color(0.16, 0.17, 0.18)]]
+const NEONS := [["KAPALI", Color(0, 0, 0, 0)], ["MAVİ", Color(0.1, 0.45, 1.0)], ["MOR", Color(0.65, 0.15, 1.0)], ["YEŞİL", Color(0.15, 1.0, 0.3)], ["KIRMIZI", Color(1.0, 0.08, 0.1)], ["TURUNCU", Color(1.0, 0.45, 0.05)], ["BEYAZ", Color(0.9, 0.95, 1.0)]]
+const TINTS := [["AÇIK", 0.78], ["KOYU", 0.93], ["SİMSİYAH", 0.99]]
+const FLAMES := [["MAVİ", Color(0.55, 0.8, 1.6, 0.9), Color(0.05, 0.15, 0.9, 0.0)], ["TURUNCU", Color(1.6, 0.9, 0.3, 0.9), Color(0.9, 0.15, 0.02, 0.0)], ["MOR", Color(1.2, 0.5, 1.7, 0.9), Color(0.4, 0.05, 0.8, 0.0)], ["YEŞİL", Color(0.6, 1.7, 0.6, 0.9), Color(0.05, 0.7, 0.1, 0.0)], ["BEYAZ", Color(1.7, 1.7, 1.8, 0.9), Color(0.5, 0.6, 1.0, 0.0)]]
+const MOD_DEFAULT := {"motor": 0, "nitro": 0, "tire": 0, "susp": 0, "paint": 0, "neon": 0, "tint": 1, "flame": 0}
 
 var state := State.MENU
 var track: Track
@@ -74,6 +80,16 @@ var speed_lines: CPUParticles3D
 var confetti: CPUParticles3D
 var last_lap_shown := false
 var merged_cache := {}
+var split_cache := {}
+var rival_engine: AudioStreamWAV
+# Dinamik çözünürlük: 60 FPS'i korumak için 3B çözünürlük ölçeği kare süresine göre ayarlanır
+const RES_TOP := [0.8, 0.92, 1.0]
+const RES_LOW := [0.55, 0.65, 0.75]
+var res_scale := 1.0
+var res_timer := 0.0
+var frame_ms := 16.0
+var gpu_ms := 10.0
+var last_us := 0
 var tick := 0
 var hud_ranks := {}
 var quality := 2
@@ -84,6 +100,7 @@ var cars: Array = []
 var player: Dictionary
 var camera: Camera3D
 var cam_shake := 0.0
+var cam_roll := 0.0
 var cam_dir := Vector3.ZERO
 var cam_pos := Vector3.ZERO
 var countdown := 0.0
@@ -102,7 +119,7 @@ var autopilot := false   # test botu için
 var debug_log := false
 
 # Kayıt
-var save := {"level": 1, "coins": 0, "paints": [0], "paint": 0, "motor": 0, "nitro": 0, "quality": -1}
+var save := {"level": 1, "coins": 0, "paints": [0], "paint": 0, "motor": 0, "nitro": 0, "quality": -1, "mods": {}}
 var paint_index := 0
 
 # Arayüz
@@ -118,8 +135,12 @@ var menu: Control
 var paint_label: Label
 var buy_button: Button
 var coin_label: Label
-var motor_button: Button
-var nitro_button: Button
+var mod_button: Button
+var mod_menu: Control
+var mod_coin: Label
+var mod_title: Label
+var perf_ui := {}          # tür -> [seviye etiketi, satın al düğmesi]
+var look_ui := {}          # tür -> değer etiketi
 var over: Control
 var over_place: Label
 var over_info: Label
@@ -150,6 +171,10 @@ func _ready() -> void:
 		_add_sfx(s, load("res://sounds/%s.wav" % s))
 	_add_sfx("impact", load("res://assets/audio/impact.ogg"))
 	_add_sfx("crowd", load("res://sounds/crowd.wav"))
+	_add_sfx("whoosh", load("res://sounds/whoosh.wav"))
+	rival_engine = load("res://sounds/engine_rival.wav")
+	rival_engine.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	rival_engine.loop_end = rival_engine.data.size() / 2
 	_setup_music()
 	engine = _looping("res://assets/audio/engine.ogg", -4.0)
 	skid = _looping("res://assets/audio/skid.ogg", -60.0)
@@ -264,6 +289,7 @@ func _build_world() -> void:
 	_build_track()
 
 	camera = Camera3D.new()
+	camera.doppler_tracking = Camera3D.DOPPLER_TRACKING_IDLE_STEP
 	camera.fov = 68
 	camera.far = 1500
 	camera.near = 0.1
@@ -382,7 +408,12 @@ func _apply_quality() -> void:
 	var q := quality
 	var vp := get_viewport()
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-	vp.scaling_3d_scale = [0.6, 0.8, 1.0][q]
+	vp.mesh_lod_threshold = [4.0, 2.0, 1.0][q]
+	res_scale = RES_TOP[q]
+	vp.scaling_3d_scale = res_scale
+	RenderingServer.viewport_set_measure_render_time(vp.get_viewport_rid(), true)
+	# Telefonda 60'a kilitle: ısınma/kısılma azalır, kare süresi düzenli kalır
+	Engine.max_fps = 60 if OS.has_feature("mobile") else 0
 	vp.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_DISABLED, Viewport.MSAA_2X][q]
 	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if q >= 1 else Viewport.SCREEN_SPACE_AA_DISABLED
 	world_env.ssao_enabled = q == 2
@@ -416,9 +447,19 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 	var body := Car.new()
 	add_child(body)
 	var model := _load_model(model_id, body)
-	if MODELS[model_id].paint: _paint(model, color)
-	_fix_glass(model)
-	_merge_body(model, MODELS[model_id].wheels, model_id + str(color))
+	var look: Dictionary = info.get("look", {})
+	var col: Color = look.get("paint", color)
+	# Goblin boya kabuğu: birleştirmeden sonra da tanınsın diye malzemesini işaretle
+	for sh in model.find_children("clearcoat*", "MeshInstance3D", true, false):
+		var shm := sh as MeshInstance3D
+		if shm.mesh == null: continue
+		for si in shm.mesh.get_surface_count():
+			var sm := shm.get_active_material(si)
+			if sm and not sm.resource_name.begins_with("Paint"): sm.resource_name = "Paint_shell"
+	if MODELS[model_id].get("split", false): _split_wheels(model, model_id)
+	_merge_body(model, MODELS[model_id].wheels, model_id)
+	if MODELS[model_id].paint or look.has("paint"): _paint(model, model_id, col)
+	_fix_glass(model, look.get("tint", 0.93))
 	var wheels := _rig_wheels(body, model, MODELS[model_id].wheels)
 	body.setup(wheels, 1250.0)
 	for w in wheels:
@@ -429,12 +470,13 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 		for mi in model.find_children("*", "MeshInstance3D", true, false):
 			var gm := mi as MeshInstance3D
 			gm.visibility_range_end = [220.0, 400.0, 0.0][quality]
-			if quality == 0: gm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			if gm.name != "ShadowProxy": gm.lod_bias = [0.3, 0.6, 1.0][quality]
+			if quality == 0 and gm.name == "ShadowProxy": gm.visible = false
 	var tune: Dictionary = info.get("tune", {})
 	for k in tune: body.set(k, tune[k])
 	var flames: Array = []
 	for x in [-0.42, 0.42]:
-		var f := _make_flame()
+		var f := _make_flame(int(look.get("flame", 0)))
 		f.position = Vector3(x, 0.45, -2.25)
 		body.add_child(f)
 		flames.append(f)
@@ -445,6 +487,8 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 		sm.position = Vector3(w.mount.x, 0.4, w.mount.z - 0.2)
 		body.add_child(sm)
 		smoke.append(sm)
+	if look.get("neon", Color(0, 0, 0, 0)).a > 0.0:
+		_add_neon(body, look.neon)
 	var sparks := _make_sparks()
 	add_child(sparks)
 	var debris := _make_debris(color)
@@ -464,13 +508,15 @@ func _make_car(model_id: String, color: Color, is_player: bool, start_s: float, 
 		body.add_child(tag)
 	if not is_player:
 		var eng := AudioStreamPlayer3D.new()
-		var est: AudioStreamOggVorbis = load("res://assets/audio/engine.ogg").duplicate()
-		est.loop = true
-		eng.stream = est
-		eng.unit_size = 7.0
-		eng.max_distance = 90.0
-		eng.volume_db = -6.0
+		eng.stream = rival_engine
+		eng.unit_size = 11.0
+		eng.max_distance = 150.0
+		eng.volume_db = 2.0
+		eng.attenuation_filter_cutoff_hz = 9000.0
+		eng.doppler_tracking = AudioStreamPlayer3D.DOPPLER_TRACKING_PHYSICS_STEP
+		eng.panning_strength = 1.3
 		eng.name = "EngineSound"
+		eng.set_meta("base", randf_range(0.88, 1.12))
 		body.add_child(eng)
 	car_seq += 1
 	var car := {
@@ -543,17 +589,30 @@ func _rot_aabb(a: AABB, b: Basis) -> AABB:
 	return out
 
 
-func _paint(model: Node3D, color: Color) -> void:
+func _paint(model: Node3D, model_id: String, color: Color) -> void:
+	var pm: Dictionary = MODELS[model_id].get("pm", {})
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var m3 := mi as MeshInstance3D
-		var is_shell := m3.name.begins_with("clearcoat")   # Goblin boya kabuğu
+		if m3.mesh == null: continue
+		var is_shell := false
 		for i in m3.mesh.get_surface_count():
 			var m := m3.get_active_material(i)
 			if not (m is BaseMaterial3D): continue
-			var concept_paint: bool = m.resource_name.begins_with("Paint")
-			if not (concept_paint or is_shell): continue
-			var nm := StandardMaterial3D.new()
-			nm.albedo_color = color.darkened(0.55) if m.resource_name.begins_with("Paint 2") else color
+			var mode := ""
+			if m.resource_name.begins_with("Paint") or is_shell: mode = "solid"
+			elif pm.has(m.resource_name): mode = pm[m.resource_name]
+			if mode == "": continue
+			var nm: BaseMaterial3D
+			if mode == "tint":
+				# Dokuyu (ortam gölgesi/detay) koru, rengi çarp
+				nm = (m as BaseMaterial3D).duplicate()
+				nm.albedo_color = color
+			else:
+				nm = StandardMaterial3D.new()
+				nm.albedo_color = color.darkened(0.55) if m.resource_name.begins_with("Paint 2") else color
+				if mode == "replace":
+					nm.normal_enabled = (m as BaseMaterial3D).normal_enabled
+					nm.normal_texture = (m as BaseMaterial3D).normal_texture
 			nm.metallic = 0.55
 			nm.roughness = 0.22
 			nm.clearcoat_enabled = true
@@ -562,10 +621,11 @@ func _paint(model: Node3D, color: Color) -> void:
 			m3.set_surface_override_material(i, nm)
 
 
-## Desteklenmeyen cam efektleri beyaz görünmesin: koyu, yarı saydam, parlak cam.
-func _fix_glass(model: Node3D) -> void:
+## Desteklenmeyen cam efektleri beyaz görünmesin: koyu, yarı saydam, parlak cam (film koyuluğu ayarlanabilir).
+func _fix_glass(model: Node3D, alpha := 0.93) -> void:
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var m3 := mi as MeshInstance3D
+		if m3.mesh == null: continue
 		for i in m3.mesh.get_surface_count():
 			var m := m3.get_active_material(i)
 			if m == null: continue
@@ -573,13 +633,127 @@ func _fix_glass(model: Node3D) -> void:
 			var skip := false
 			for w in ["light", "red", "lamp", "head", "tail", "brake", "blink", "reverse"]:
 				if n.contains(w): skip = true
-			if n.contains("glass") and not skip:
+			if (n.contains("glass") or n.contains("window")) and not skip:
 				var g := StandardMaterial3D.new()
-				g.albedo_color = Color(0.02, 0.025, 0.035, 0.93)
+				g.albedo_color = Color(0.02, 0.025, 0.035, alpha)
 				g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 				g.metallic = 0.9
 				g.roughness = 0.04
 				m3.set_surface_override_material(i, g)
+
+
+## Tekerlekleri tek mesh'te birleşik gelen modeller için: tekerlek parçalarını dört köşeye (FL/FR/RL/RR)
+## böler ve her köşeyi "WheelSplit_xx" adlı tek bir düğümde toplar (dönebilir tekerlek).
+func _split_wheels(model: Node3D, model_id: String) -> void:
+	var body: Node3D = model.get_parent()
+	var to_body: Transform3D = body.global_transform.affine_inverse()
+	var cached: Array = split_cache.get(model_id, [])
+	if cached.is_empty() and ResourceLoader.exists(BAKE_DIR + model_id + "_wheels.res"):
+		var wr: Resource = load(BAKE_DIR + model_id + "_wheels.res")
+		cached = wr.get_meta("wheels")
+	var groups := {}   # köşe -> {mat -> [verts, norms, uvs, idx]}
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null or not m.is_visible_in_tree(): continue
+		var xf: Transform3D = to_body * m.global_transform
+		var b: AABB = xf * m.get_aabb()
+		var sz := b.size
+		var c := b.get_center()
+		var span4: bool = sz.x > 1.2 and sz.x < 2.5 and sz.z > 2.0 and sz.z < 3.9 and sz.y > 0.33 and sz.y < 0.95 and c.y < 0.6 and b.position.y < 0.14
+		var single: bool = sz.y > 0.4 and sz.y < 0.95 and sz.z > 0.4 and sz.z < 1.0 and sz.x < 0.55 and c.y < 0.6 and absf(c.x) > 0.45 and absf(c.z) > 0.7 and b.position.y < 0.16
+		if not (span4 or single): continue
+		if not cached.is_empty():
+			m.mesh = null
+			continue
+		for si in m.mesh.get_surface_count():
+			var arr := m.mesh.surface_get_arrays(si)
+			var mat: Material = m.get_active_material(si)
+			var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var norms = arr[Mesh.ARRAY_NORMAL]
+			var uvs = arr[Mesh.ARRAY_TEX_UV]
+			var idx = arr[Mesh.ARRAY_INDEX]
+			if idx == null or idx.size() == 0:
+				idx = PackedInt32Array(range(verts.size()))
+			var tv := PackedVector3Array()
+			tv.resize(verts.size())
+			for vi in verts.size(): tv[vi] = xf * verts[vi]
+			var tn := PackedVector3Array()
+			if norms != null and norms.size() == verts.size():
+				tn.resize(verts.size())
+				for vi in verts.size(): tn[vi] = (xf.basis * norms[vi]).normalized()
+			for t in range(0, idx.size(), 3):
+				var a: int = idx[t]
+				var bb: int = idx[t + 1]
+				var cc: int = idx[t + 2]
+				var cen: Vector3 = (tv[a] + tv[bb] + tv[cc]) / 3.0
+				if single: cen = c
+				var key := ("F" if cen.z > 0.0 else "R") + ("L" if cen.x > 0.0 else "R")
+				if not groups.has(key): groups[key] = {}
+				if not groups[key].has(mat): groups[key][mat] = [PackedVector3Array(), PackedVector3Array(), PackedVector2Array()]
+				var g: Array = groups[key][mat]
+				for vi in [a, bb, cc]:
+					g[0].append(tv[vi])
+					g[1].append(tn[vi] if tn.size() > 0 else Vector3.UP)
+					g[2].append(uvs[vi] if uvs != null and uvs.size() > vi else Vector2.ZERO)
+		m.mesh = null
+	if cached.is_empty():
+		# Her köşe için tek mesh (malzeme başına bir yüzey); model başına bir kez hesaplanır
+		for key in groups:
+			var aabb := AABB()
+			var first := true
+			for mat in groups[key]:
+				for v in groups[key][mat][0]:
+					if first:
+						aabb = AABB(v, Vector3.ZERO)
+						first = false
+					else:
+						aabb = aabb.expand(v)
+			var center := aabb.get_center()
+			var mesh := ArrayMesh.new()
+			for mat in groups[key]:
+				var g: Array = groups[key][mat]
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				for vi in g[0].size():
+					st.set_normal(g[1][vi])
+					st.set_uv(g[2][vi])
+					st.add_vertex(g[0][vi] - center)
+				st.generate_tangents()
+				st.commit(mesh)
+				mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
+			cached.append([key, center, _lod_mesh(mesh)])
+		if OS.get_environment("BAKE") != "" and not cached.is_empty():
+			var wr := Resource.new()
+			wr.set_meta("wheels", cached)
+			ResourceSaver.save(wr, BAKE_DIR + model_id + "_wheels.res", ResourceSaver.FLAG_COMPRESS)
+		split_cache[model_id] = cached
+	if cached.is_empty(): return
+	# Gövde uzayında bir taşıyıcı: altındaki tekerlek düğümleri doğrudan araç koordinatında
+	var holder := Node3D.new()
+	holder.name = "WheelSplitRoot"
+	model.add_child(holder)
+	holder.global_transform = body.global_transform
+	for e in cached:
+		var wheel := Node3D.new()
+		wheel.name = "WheelSplit_" + e[0]
+		holder.add_child(wheel)
+		var mi2 := MeshInstance3D.new()
+		mi2.mesh = e[2]
+		mi2.position = e[1]
+		wheel.add_child(mi2)
+
+
+## Uzak mesafe için otomatik LOD seviyeleri üretir (derlemede bir kez: assets/baked/)
+func _lod_mesh(src: ArrayMesh) -> ArrayMesh:
+	var im := ImporterMesh.new()
+	for si in src.get_surface_count():
+		var arr := src.surface_get_arrays(si)
+		# Özel/kemik kanallarını at (LOD üretici ve statik gövde için gereksiz)
+		for a in [Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3, Mesh.ARRAY_BONES, Mesh.ARRAY_WEIGHTS]:
+			arr[a] = null
+		im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, src.surface_get_material(si), src.surface_get_name(si))
+	im.generate_lods(25.0, 60.0, [])
+	return im.get_mesh()
 
 
 ## Optimizasyon: tekerlek dışındaki tüm parçaları malzemeye göre tek mesh'te birleştir
@@ -590,7 +764,7 @@ func _merge_body(model: Node3D, pattern: String, cache_key: String) -> void:
 	var parts: Array = []
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
-		if not m.is_visible_in_tree(): continue
+		if m.mesh == null or not m.is_visible_in_tree(): continue
 		var in_wheel := false
 		var n: Node = m
 		while n != null and n != model:
@@ -599,12 +773,21 @@ func _merge_body(model: Node3D, pattern: String, cache_key: String) -> void:
 		if not in_wheel: parts.append(m)
 	if parts.is_empty(): return
 	var mesh: ArrayMesh = merged_cache.get(cache_key)
+	var baked := BAKE_DIR + cache_key + "_body.res"
+	if mesh == null and ResourceLoader.exists(baked): mesh = load(baked)
 	if mesh == null:
 		var groups := {}
 		for m in parts:
 			var xf: Transform3D = inv * m.global_transform
 			for si in m.mesh.get_surface_count():
 				var mat: Material = m.get_active_material(si)
+				# Koyu camın ardında görünmeyen iç mekân yüzeylerini at (üçgen ve çizim tasarrufu)
+				if mat and OS.get_environment("NOHIDE") == "":
+					var mn := mat.resource_name.to_lower()
+					var interior := false
+					for w in INTERIOR_MATS:
+						if mn.contains(w): interior = true
+					if interior: continue
 				if not groups.has(mat):
 					var st := SurfaceTool.new()
 					st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -616,11 +799,22 @@ func _merge_body(model: Node3D, pattern: String, cache_key: String) -> void:
 			st.commit(mesh)
 			if mesh.get_surface_count() > 0:
 				mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
-		merged_cache[cache_key] = mesh
+		# Katmanlı boya kabuğu olan modelde LOD kabuğu delip alttaki gövdeyi gösterir: LOD yok
+		if not MODELS[cache_key].get("nolod", false): mesh = _lod_mesh(mesh)
+		if OS.get_environment("BAKE") != "": ResourceSaver.save(mesh, baked, ResourceSaver.FLAG_COMPRESS)
+	merged_cache[cache_key] = mesh
 	var merged := MeshInstance3D.new()
 	merged.mesh = mesh
 	merged.name = "MergedBody"
+	merged.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	model.add_child(merged)
+	# Gölge için aynı mesh'in kaba LOD'u (gölge geçişinde tam detay gereksiz)
+	var sh := MeshInstance3D.new()
+	sh.mesh = mesh
+	sh.name = "ShadowProxy"
+	sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+	sh.lod_bias = 0.08
+	model.add_child(sh)
 	# Düğümleri silme: bazı modellerde tekerlekler gövde parçasının alt düğümü (ör. Aurora)
 	for m in parts: m.mesh = null
 
@@ -678,7 +872,41 @@ func _rig_wheels(body: Node3D, model: Node3D, pattern: String) -> Array:
 	return out
 
 
-func _make_flame() -> CPUParticles3D:
+## Alt gövde neon ışığı: yola yansıyan yumuşak parıltı (+ orta/yüksek kalitede gerçek ışık)
+func _add_neon(body: Node3D, color: Color) -> void:
+	var glow := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(3.0, 5.4)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var gt := GradientTexture2D.new()
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(0.5, 0.0)
+	var g := Gradient.new()
+	g.set_color(0, Color(1, 1, 1, 1))
+	g.set_color(1, Color(1, 1, 1, 0))
+	gt.gradient = g
+	m.albedo_texture = gt
+	m.albedo_color = Color(color.r * 1.6, color.g * 1.6, color.b * 1.6, 0.9)
+	pm.material = m
+	glow.mesh = pm
+	glow.position = Vector3(0, 0.1, 0)
+	glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	glow.name = "Neon"
+	body.add_child(glow)
+	if quality >= 1:
+		var l := OmniLight3D.new()
+		l.light_color = color
+		l.light_energy = 2.2
+		l.omni_range = 3.2
+		l.position = Vector3(0, 0.3, 0)
+		body.add_child(l)
+
+
+func _make_flame(style := 0) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.emitting = false
 	p.amount = 40
@@ -704,8 +932,9 @@ func _make_flame() -> CPUParticles3D:
 	q.material = m
 	p.mesh = q
 	var g := Gradient.new()
-	g.set_color(0, Color(0.55, 0.8, 1.6, 0.9))
-	g.set_color(1, Color(0.05, 0.15, 0.9, 0.0))
+	var fc: Array = FLAMES[clampi(style, 0, FLAMES.size() - 1)]
+	g.set_color(0, fc[1])
+	g.set_color(1, fc[2])
 	p.color_ramp = g
 	return p
 
@@ -714,8 +943,8 @@ func _make_flame() -> CPUParticles3D:
 func _make_smoke() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.emitting = false
-	p.amount = [20, 36, 52][quality]
-	p.lifetime = 1.0
+	p.amount = [10, 16, 24][quality]
+	p.lifetime = 0.9
 	# Arabanın çerçevesinde: duman arabayla gelip arkasında iz olarak yayılır (hızda ekranda kalır)
 	p.local_coords = true
 	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
@@ -739,7 +968,7 @@ func _make_smoke() -> CPUParticles3D:
 	curve.add_point(Vector2(1.0, 1.9))
 	p.scale_amount_curve = curve
 	var q := QuadMesh.new()
-	q.size = Vector2(1.7, 1.7)
+	q.size = Vector2(1.4, 1.4)
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = load("res://assets/sprites/smoke_soft.png")
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -759,7 +988,7 @@ func _make_smoke() -> CPUParticles3D:
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var g := Gradient.new()
 	g.offsets = PackedFloat32Array([0.0, 0.12, 0.55, 1.0])
-	g.colors = PackedColorArray([Color(0.88, 0.86, 0.84, 0.0), Color(0.88, 0.86, 0.84, 0.5), Color(0.82, 0.8, 0.78, 0.26), Color(0.8, 0.78, 0.76, 0.0)])
+	g.colors = PackedColorArray([Color(0.88, 0.86, 0.84, 0.0), Color(0.88, 0.86, 0.84, 0.3), Color(0.82, 0.8, 0.78, 0.14), Color(0.8, 0.78, 0.76, 0.0)])
 	p.color_ramp = g
 	return p
 
@@ -882,18 +1111,25 @@ func _drive(car: Dictionary, delta: float) -> void:
 	elif car.player and not car.finished: _player_input(car, delta)
 	else: _ai_input(car, delta)
 	if car.boost:
-		car.nitro -= delta * (0.2 - (0.025 * int(save.nitro) if car.player else 0.0))
+		car.nitro -= delta * (0.2 - (0.022 * int(_mods(paint_index).nitro) if car.player else 0.0))
 		if car.nitro <= 0.0:
 			car.nitro = 0.0
 			car.boost = false
 	body.nitro_on = car.boost and body.throttle > 0.1
 	for f in car.flames: f.emitting = body.nitro_on
-	var burnout: bool = body.throttle > 0.8 and absf(body.speed) < 12.0 and body.slip > 0.2
-	_set_smoke(car, body.on_ground >= 2 and ((body.slip > 0.3 and absf(body.speed) > 4.0) or burnout))
+	# Duman yalnızca gerçek kaymada: drift (yanal kayma), el freni ya da kalkışta patinaj
+	var spd: float = absf(body.speed)
+	var lat: float = absf(body.lat_speed)
+	var burnout: bool = car.player and body.throttle > 0.8 and spd < 9.0 and body.slip > 0.35
+	var drifting: bool = spd > 8.0 and (lat > (4.5 if car.player else 6.5) or (body.handbrake and lat > 2.5))
+	_set_smoke(car, body.on_ground >= 2 and (drifting or burnout))
 	_skid(car)
 	if not car.player:
 		var es: AudioStreamPlayer3D = body.get_node_or_null("EngineSound")
-		if es: es.pitch_scale = 0.6 + absf(body.speed) / 45.0
+		if es:
+			# Kesintisiz devir (vites yok): hız + gaz yükü
+			var target: float = float(es.get_meta("base")) * (0.62 + spd / 50.0 + body.throttle * 0.08)
+			es.pitch_scale = lerpf(es.pitch_scale, target, clampf(delta * 6.0, 0.0, 1.0))
 	# Kurtarma: ters dönme, takılma, ters yön, pist dışı
 	var up_dot: float = body.global_basis.y.dot(Vector3.UP)
 	car.flip = car.flip + delta if up_dot < 0.35 else 0.0
@@ -1004,7 +1240,7 @@ func _player_input(car: Dictionary, delta: float) -> void:
 		body.handbrake = _pressed("handbrake")
 		if _pressed("nitro") and car.nitro > 0.08: car.boost = true
 	# Nitro kazanımı: zamanla, kaymayla (drift) ve hava süresiyle
-	if not car.boost: car.nitro = minf(car.nitro + delta * (0.025 + 0.008 * int(save.nitro)), 1.0)
+	if not car.boost: car.nitro = minf(car.nitro + delta * (0.025 + 0.007 * int(_mods(paint_index).nitro)), 1.0)
 	if body.slip > 0.35 and body.speed > 15.0: car.nitro = minf(car.nitro + delta * 0.22, 1.0)
 	if body.air_time > 0.25: car.nitro = minf(car.nitro + delta * 0.3, 1.0)
 	skid.volume_db = lerpf(skid.volume_db, -6.0 if body.slip > 0.35 and absf(body.speed) > 8.0 and body.on_ground >= 2 else -60.0, delta * 8.0)
@@ -1072,8 +1308,7 @@ func _setup_grid() -> void:
 		var s := -12.0 - row * 10.0 - (5.0 if i % 2 else 0.0)
 		if i == CAR_COUNT - 1:
 			var g: Dictionary = GARAGE[paint_index]
-			var cs := _car_stats(paint_index)
-			player = _make_car(g.model, g.color, true, s, lane, {"tune": {"power_kw": cs.power + 22.0 * int(save.motor), "grip_front": 1.25 * cs.grip, "grip_rear": 1.35 * cs.grip}})
+			player = _make_car(g.model, g.color, true, s, lane, {"tune": _player_tune(paint_index), "look": _player_look(paint_index)})
 			cars.append(player)
 		else:
 			var r: Dictionary = rivals[i]
@@ -1098,6 +1333,7 @@ func _go_menu() -> void:
 	hud.visible = false
 	controls.visible = false
 	over.visible = false
+	mod_menu.visible = false
 	menu.visible = true
 	_refresh_menu()
 
@@ -1123,6 +1359,7 @@ func _start_race() -> void:
 	cam_dir = Vector3.ZERO
 	race_time = 0.0
 	menu.visible = false
+	mod_menu.visible = false
 	over.visible = false
 	hud.visible = true
 	controls.visible = touch_mode
@@ -1196,12 +1433,35 @@ func _process(delta: float) -> void:
 			if state == State.RACE: race_time += delta
 			var body: Car = player.body
 			var kmh: float = absf(body.speed) * 3.6
-			var gear: int = mini(int(kmh / 55.0), 5)
-			var rpm: float = fmod(kmh, 55.0) / 55.0 if gear < 5 else clampf((kmh - 275.0) / 80.0, 0.0, 1.0)
-			var load_f: float = 0.15 if body.throttle > 0.1 else 0.0
-			engine.pitch_scale = lerpf(engine.pitch_scale, 0.7 + rpm * 0.75 + gear * 0.06 + load_f + (0.1 if player.boost else 0.0), delta * 10.0)
+			# Kesintisiz devir eğrisi (vites sistemi yok): hızla yükselir, gaz yükü ve nitro ekler
+			var rpm: float = 1.0 - exp(-kmh / 140.0)
+			var load_f: float = 0.12 * body.throttle
+			var slip_rev: float = 0.25 * body.slip if body.throttle > 0.5 else 0.0
+			engine.pitch_scale = lerpf(engine.pitch_scale, 0.72 + rpm * 1.25 + load_f + slip_rev + (0.12 if player.boost else 0.0), delta * 7.0)
+			engine.volume_db = lerpf(engine.volume_db, -7.0 + 4.0 * body.throttle, delta * 5.0)
 	_update_camera(delta)
 	_update_hud()
+	_adapt_resolution()
+
+
+func _adapt_resolution() -> void:
+	var now := Time.get_ticks_usec()
+	var ms := (now - last_us) / 1000.0
+	last_us = now
+	if ms <= 0.0 or ms > 100.0: return
+	frame_ms = lerpf(frame_ms, ms, 0.1)
+	var vp := get_viewport()
+	var g := RenderingServer.viewport_get_measured_render_time_gpu(vp.get_viewport_rid())
+	if g > 0.0: gpu_ms = lerpf(gpu_ms, g, 0.1)
+	res_timer += ms / 1000.0
+	if res_timer < 0.4 or state == State.MENU: return
+	res_timer = 0.0
+	var old := res_scale
+	if frame_ms > 17.8 or gpu_ms > 15.0:
+		res_scale = maxf(res_scale - 0.05, RES_LOW[quality])
+	elif frame_ms < 17.2 and gpu_ms < 11.0:
+		res_scale = minf(res_scale + 0.02, RES_TOP[quality])
+	if res_scale != old: vp.scaling_3d_scale = res_scale
 
 
 func _ranks() -> Dictionary:
@@ -1220,6 +1480,7 @@ func _near_miss() -> void:
 		var ds: float = player.s - c.s
 		if ds > 0.0 and ds < 3.0 and absf(c.x - player.x) < 3.2:
 			c.nm = true
+			sfx.whoosh.play()
 			player.nitro = minf(player.nitro + 0.08, 1.0)
 			_popup("YAKIN GEÇİŞ  +NİTRO", Color(0.6, 0.9, 1.0))
 		elif ds < -10.0 or ds > 20.0:
@@ -1255,6 +1516,13 @@ func _update_camera(delta: float) -> void:
 	cam_pos.z = target.z
 	camera.position = cam_pos
 	camera.look_at(p + cam_dir * 7.0 + Vector3.UP * 0.9)
+	# Virajda hafif yatış (dönüş hızına göre) ve yüksek hızda ince titreşim: hız hissi
+	var yaw_rate: float = body.angular_velocity.y
+	cam_roll = lerpf(cam_roll, clampf(yaw_rate * 0.035, -0.06, 0.06), 1.0 - exp(-delta * 4.0))
+	camera.rotate_object_local(Vector3.FORWARD, cam_roll)
+	if v > 50.0 and body.on_ground >= 2:
+		var hs := (v - 50.0) * 0.0004 + (0.006 if player.boost else 0.0)
+		camera.position += Vector3(randf_range(-hs, hs), randf_range(-hs, hs), 0.0)
 	var fov: float = 64.0 + v * 0.13 + (10.0 if player.boost else 0.0)
 	camera.fov = lerpf(camera.fov, fov, delta * 3.0)
 	if cam_shake > 0.0:
@@ -1419,15 +1687,20 @@ func _ahead_rank(car: Dictionary) -> int:
 
 func _paint_step(d: int) -> void:
 	paint_index = wrapi(paint_index + d, 0, GARAGE.size())
+	_rebuild_player()
+	_refresh_menu()
+
+
+## Garajda oyuncu aracını yeniden kur (araç/boya/neon değişince)
+func _rebuild_player() -> void:
 	var old: Dictionary = player
 	var g: Dictionary = GARAGE[paint_index]
-	player = _make_car(g.model, g.color, true, old.s, old.x)
+	player = _make_car(g.model, g.color, true, old.s, old.x, {"tune": _player_tune(paint_index), "look": _player_look(paint_index)})
 	player.body.freeze = true
 	cars[cars.find(old)] = player
 	old.body.queue_free()
 	old.sparks.queue_free()
 	old.debris.queue_free()
-	_refresh_menu()
 
 
 func _on_main_button() -> void:
@@ -1442,13 +1715,63 @@ func _on_main_button() -> void:
 		_refresh_menu()
 
 
-func _upgrade(kind: String) -> void:
-	var lvl: int = int(save[kind])
-	if lvl >= UPGRADE_COST.size() or int(save.coins) < UPGRADE_COST[lvl]: return
-	save.coins = int(save.coins) - UPGRADE_COST[lvl]
-	save[kind] = lvl + 1
+func _mods(i: int) -> Dictionary:
+	var m: Dictionary = MOD_DEFAULT.duplicate()
+	var stored: Dictionary = save.mods.get(str(i), {})
+	for k in stored: m[k] = stored[k]
+	return m
+
+
+func _set_mod(i: int, key: String, value: int) -> void:
+	var m := _mods(i)
+	m[key] = value
+	save.mods[str(i)] = m
 	_write_save()
+
+
+## Modifiyeye göre oyuncu aracının fizik ayarları
+func _player_tune(i: int) -> Dictionary:
+	var cs := _car_stats(i)
+	var m := _mods(i)
+	var tg: float = cs.grip * (1.0 + 0.03 * int(m.tire))
+	var su := int(m.susp)
+	return {
+		"power_kw": cs.power + 20.0 * int(m.motor), "nitro_kw": 170.0 + 18.0 * int(m.nitro),
+		"grip_front": 1.25 * tg, "grip_rear": 1.35 * tg,
+		"rest": 0.25 - 0.012 * su, "spring": 32000.0 + 2600.0 * su, "damper": 3400.0 + 320.0 * su,
+		"corner_stiffness": 11000.0 + 800.0 * su, "yaw_gain": 2.5 + 0.18 * su,
+	}
+
+
+func _player_look(i: int) -> Dictionary:
+	var m := _mods(i)
+	var look := {"tint": TINTS[clampi(int(m.tint), 0, TINTS.size() - 1)][1], "flame": int(m.flame),
+		"neon": NEONS[clampi(int(m.neon), 0, NEONS.size() - 1)][1]}
+	if int(m.paint) > 0: look["paint"] = PAINTS[clampi(int(m.paint), 0, PAINTS.size() - 1)][1]
+	return look
+
+
+func _upgrade(kind: String) -> void:
+	var lvl: int = int(_mods(paint_index)[kind])
+	if lvl >= MOD_COST.size() or int(save.coins) < MOD_COST[lvl]: return
+	save.coins = int(save.coins) - MOD_COST[lvl]
+	_set_mod(paint_index, kind, lvl + 1)
 	sfx.coin.play()
+	_rebuild_player()
+	_refresh_menu()
+
+
+func _look_step(kind: String, d: int) -> void:
+	var n: int = {"paint": PAINTS.size(), "neon": NEONS.size(), "tint": TINTS.size(), "flame": FLAMES.size()}[kind]
+	_set_mod(paint_index, kind, wrapi(int(_mods(paint_index)[kind]) + d, 0, n))
+	sfx.click.play()
+	_rebuild_player()
+	_refresh_menu()
+
+
+func _show_mods(on: bool) -> void:
+	mod_menu.visible = on
+	menu.visible = not on
 	_refresh_menu()
 
 
@@ -1600,16 +1923,12 @@ func _build_ui() -> void:
 	# Sağ panel: yükseltmeler ve ayarlar
 	var up_p := _panel(menu)
 	_box(up_p, 1, 0.5, -180, 30, 320, 300)
-	var ul := _label("YÜKSELTMELER", 18, up_p, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	var ul := _label("ATÖLYE", 18, up_p, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
 	ul.position = Vector2(20, 12)
-	motor_button = _button("", up_p, _upgrade.bind("motor"))
-	motor_button.add_theme_font_size_override("font_size", 20)
-	motor_button.position = Vector2(20, 46)
-	motor_button.size = Vector2(280, 60)
-	nitro_button = _button("", up_p, _upgrade.bind("nitro"))
-	nitro_button.add_theme_font_size_override("font_size", 20)
-	nitro_button.position = Vector2(20, 116)
-	nitro_button.size = Vector2(280, 60)
+	mod_button = _button("MODİFİYE", up_p, _show_mods.bind(true))
+	mod_button.add_theme_font_size_override("font_size", 30)
+	mod_button.position = Vector2(20, 46)
+	mod_button.size = Vector2(280, 130)
 	var sl2 := _label("AYARLAR", 18, up_p, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
 	sl2.position = Vector2(20, 190)
 	quality_button = _button("", up_p, _cycle_quality)
@@ -1619,8 +1938,60 @@ func _build_ui() -> void:
 	buy_button = _button("YARIŞ!", menu, _on_main_button)
 	buy_button.add_theme_font_size_override("font_size", 40)
 	_box(buy_button, 0.5, 1, 0, -70, 380, 86)
-	var credit := _label("Araçlar: Eric Chadwick/DGG, ollitei, Han66st, Daniel Zhabotinsky (CC BY 4.0) · Çevre: Poly Haven (CC0) · Ses: Kenney (CC0) · Fizik: Godot Jolt", 13, menu, Color(1, 1, 1, 0.5))
+	var credit := _label("Araçlar: Eric Chadwick/DGG, ollitei, vecarz/heynic (CC BY 4.0) · Çevre: Poly Haven (CC0) · Ses: Kenney (CC0) · Fizik: Godot Jolt", 13, menu, Color(1, 1, 1, 0.5))
 	_box(credit, 0.5, 1, 0, -12, 1200, 20)
+
+	# --- Modifiye atölyesi
+	mod_menu = Control.new()
+	_full(mod_menu)
+	root.add_child(mod_menu)
+	mod_title = _label("MODİFİYE", 52, mod_menu, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	_box(mod_title, 0, 0, 330, 52, 620, 70)
+	var mc := _panel(mod_menu)
+	_box(mc, 1, 0, -170, 50, 300, 64)
+	mod_coin = _label("", 26, mc, ACCENT_2, HORIZONTAL_ALIGNMENT_CENTER)
+	mod_coin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var pp := _panel(mod_menu)
+	_box(pp, 0, 0.5, 230, 20, 420, 400)
+	var pt0 := _label("PERFORMANS", 18, pp, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	pt0.position = Vector2(20, 12)
+	var yy := 44.0
+	for pm in PERF_MODS:
+		var nl := _label(pm[1], 22, pp, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+		nl.position = Vector2(20, yy)
+		var dl := _label(pm[2], 14, pp, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_LEFT)
+		dl.position = Vector2(20, yy + 30)
+		var lv := _label("", 20, pp, ACCENT_2, HORIZONTAL_ALIGNMENT_LEFT)
+		lv.position = Vector2(20, yy + 50)
+		var bb := _button("", pp, _upgrade.bind(pm[0]))
+		bb.add_theme_font_size_override("font_size", 20)
+		bb.position = Vector2(250, yy + 14)
+		bb.size = Vector2(150, 58)
+		perf_ui[pm[0]] = [lv, bb]
+		yy += 88.0
+	var lp2 := _panel(mod_menu)
+	_box(lp2, 1, 0.5, -230, 20, 420, 400)
+	var lt0 := _label("GÖRÜNÜM", 18, lp2, ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
+	lt0.position = Vector2(20, 12)
+	yy = 44.0
+	for lm in LOOK_MODS:
+		var nl2 := _label(lm[1], 18, lp2, Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_LEFT)
+		nl2.position = Vector2(20, yy)
+		var bl := _button("◀", lp2, _look_step.bind(lm[0], -1))
+		bl.position = Vector2(20, yy + 26)
+		bl.size = Vector2(64, 52)
+		var br := _button("▶", lp2, _look_step.bind(lm[0], 1))
+		br.position = Vector2(336, yy + 26)
+		br.size = Vector2(64, 52)
+		var vl := _label("", 22, lp2, Color.WHITE)
+		vl.position = Vector2(84, yy + 36)
+		vl.size = Vector2(252, 34)
+		look_ui[lm[0]] = vl
+		yy += 88.0
+	var done := _button("TAMAM", mod_menu, _show_mods.bind(false))
+	done.add_theme_font_size_override("font_size", 36)
+	_box(done, 0.5, 1, 0, -70, 320, 80)
+	mod_menu.visible = false
 
 	# --- Duraklatma
 	pause_menu = Control.new()
@@ -1752,34 +2123,47 @@ func _update_hud() -> void:
 
 func _car_stats(i: int) -> Dictionary:
 	# Pahalı araçlar daha güçlü ve daha iyi yol tutar
-	return {"power": 290.0 + i * 9.0, "grip": 1.0 + i * 0.02}
+	return {"power": 290.0 + i * 12.0, "grip": 1.0 + i * 0.025}
 
 
 func _refresh_menu() -> void:
 	var p: Dictionary = GARAGE[paint_index]
 	var owned: bool = save.paints.has(paint_index)
 	paint_label.text = p.name
-	var st := _car_stats(paint_index)
-	var pw: float = st.power + 22.0 * int(save.motor)
+	var tn := _player_tune(paint_index)
+	var pw: float = tn.power_kw
 	stat_bars[0].value = clampf((pow(pw, 1.0 / 3.0) - 6.0) / (8.2 - 6.0), 0.05, 1.0)
 	stat_bars[1].value = clampf((pw - 260.0) / 260.0, 0.05, 1.0)
-	stat_bars[2].value = clampf((st.grip - 0.95) / 0.3, 0.05, 1.0)
+	stat_bars[2].value = clampf((tn.grip_front / 1.25 - 0.95) / 0.45, 0.05, 1.0)
 	price_label.text = "SAHİPSİN" if owned else "%d ●" % p.price
 	price_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6) if owned else ACCENT_2)
 	buy_button.text = "YARIŞ!" if owned else "SATIN AL  %d ●" % p.price
 	buy_button.disabled = not owned and int(save.coins) < int(p.price)
 	coin_label.text = "● %d     YARIŞ %d" % [save.coins, save.level]
 	quality_button.text = "GRAFİK: %s" % ["DÜŞÜK", "ORTA", "YÜKSEK"][quality]
-	for pair in [[motor_button, "motor", "MOTOR"], [nitro_button, "nitro", "NİTRO"]]:
-		var lvl: int = int(save[pair[1]])
-		var b: Button = pair[0]
-		var pips := "Sv %d/%d" % [lvl, UPGRADE_COST.size()]
-		if lvl >= UPGRADE_COST.size():
-			b.text = "%s  %s  MAKS" % [pair[2], pips]
+	mod_button.disabled = not owned
+	mod_button.text = "MODİFİYE" if owned else "MODİFİYE\n(önce satın al)"
+	var m := _mods(paint_index)
+	mod_title.text = "MODİFİYE · " + p.name
+	mod_coin.text = "● %d" % save.coins
+	for k in perf_ui:
+		var lvl: int = int(m[k])
+		var pips := ""
+		for i in MOD_COST.size(): pips += "■ " if i < lvl else "□ "
+		perf_ui[k][0].text = pips
+		var b: Button = perf_ui[k][1]
+		if lvl >= MOD_COST.size():
+			b.text = "MAKS"
 			b.disabled = true
 		else:
-			b.text = "%s  %s  %d ●" % [pair[2], pips, UPGRADE_COST[lvl]]
-			b.disabled = int(save.coins) < UPGRADE_COST[lvl]
+			b.text = "%d ●" % MOD_COST[lvl]
+			b.disabled = int(save.coins) < MOD_COST[lvl]
+	look_ui.paint.text = PAINTS[int(m.paint)][0]
+	look_ui.paint.add_theme_color_override("font_color", Color.WHITE if int(m.paint) == 0 else PAINTS[int(m.paint)][1].lightened(0.35))
+	look_ui.neon.text = NEONS[int(m.neon)][0]
+	look_ui.neon.add_theme_color_override("font_color", Color.WHITE if int(m.neon) == 0 else NEONS[int(m.neon)][1])
+	look_ui.tint.text = TINTS[int(m.tint)][0]
+	look_ui.flame.text = FLAMES[int(m.flame)][0]
 
 
 func _finish_player() -> void:
@@ -1876,6 +2260,14 @@ func _load_save() -> void:
 	if cfg.load("user://save2.cfg") != OK: return
 	for k in save.keys(): save[k] = cfg.get_value("save", k, save[k])
 	if not save.paints.has(int(save.paint)): save.paint = 0
+	# Eski kayıt: genel motor/nitro yükseltmelerini kullanılan araca taşı
+	if save.mods.is_empty() and (int(save.motor) > 0 or int(save.nitro) > 0):
+		var m: Dictionary = MOD_DEFAULT.duplicate()
+		m.motor = int(save.motor)
+		m.nitro = int(save.nitro)
+		save.mods[str(int(save.paint))] = m
+		save.motor = 0
+		save.nitro = 0
 
 
 func _write_save() -> void:

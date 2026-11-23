@@ -562,7 +562,8 @@ func _build_terrain() -> void:
 			var k := z * _hw + x
 			var wx := _horigin.x + x * HCELL
 			var wz := _horigin.y + z * HCELL
-			var de := dist[k] - edge
+			# Tribün bölgesinde kanyon duvarı geri çekilir (tribün dağın içine girmesin)
+			var de := dist[k] - edge - STAND_CLEAR * stand_factor(near[k])
 			var wall := 18.0 + 42.0 * (big.get_noise_2d(wx, wz) * 0.5 + 0.5)
 			var rise := smoothstep(4.0, 26.0 + wall * 0.4, de)
 			var base: float = pos[near[k]].y
@@ -710,6 +711,7 @@ func _build_env() -> void:
 	var r_far := lerpf(0.45, 1.0, env_quality)   # telefonda dekor daha yakına kadar çizilir
 	var step := int(lerpf(14.0, 5.0, env_quality))
 	for i in range(0, n, step):
+		if stand_factor(i) > 0.0: continue   # tribün bölgesi boş kalsın
 		for side in [-1.0, 1.0]:
 			# Kanyon tabanında büyük kaya blokları (gölgeli)
 			if randf() < 0.3:
@@ -775,6 +777,23 @@ func _build_banners() -> void:
 
 
 ## Başlangıç/bitiş çevresinde iki yanda seyirci tribünleri (pistin kıvrımını takip eder)
+const STAND_I0 := -55   # tribünler: -110 m .. +50 m
+const STAND_I1 := 25
+const STAND_CLEAR := 24.0
+
+
+## Pist indeksinin tribün bölgesinde olma oranı (0..1, uçlarda yumuşak geçiş)
+func stand_factor(i: int) -> float:
+	var n := pos.size()
+	var j := wrapi(i - STAND_I0, 0, n)   # tribün başından itibaren
+	var span := STAND_I1 - STAND_I0
+	var ramp := 18.0
+	if j <= span: return 1.0
+	var after := float(j - span)
+	var before := float(n - j)
+	return clampf(1.0 - minf(after, before) / ramp, 0.0, 1.0)
+
+
 func _build_stands() -> void:
 	var n := pos.size()
 	var crowd_mat := StandardMaterial3D.new()
@@ -785,12 +804,12 @@ func _build_stands() -> void:
 	concrete.albedo_color = Color(0.62, 0.6, 0.58)
 	concrete.roughness = 0.95
 	var roof_m := StandardMaterial3D.new()
-	roof_m.albedo_color = Color(0.85, 0.32, 0.08)
+	roof_m.albedo_color = Color(0.32, 0.34, 0.37)
 	roof_m.metallic = 0.4
 	roof_m.roughness = 0.5
 	roof_m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	var i0 := -55   # -110 m
-	var i1 := 25    # +50 m
+	var i0 := STAND_I0
+	var i1 := STAND_I1
 	var sum := Vector3.ZERO
 	for side in [-1.0, 1.0]:
 		var crowd_st := SurfaceTool.new()

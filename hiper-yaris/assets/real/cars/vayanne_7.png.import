@@ -1,0 +1,39 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://b6tjc2s0tretw"
+path.s3tc="res://.godot/imported/vayanne_7.png-1adb7d22240fc456c9ce80b46b04feea.s3tc.ctex"
+path.etc2="res://.godot/imported/vayanne_7.png-1adb7d22240fc456c9ce80b46b04feea.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "d645602fffba0fb06f26e2a65e6b46ca"
+}
+
+[deps]
+
+source_file="res://assets/real/cars/vayanne_7.png"
+dest_files=["res://.godot/imported/vayanne_7.png-1adb7d22240fc456c9ce80b46b04feea.s3tc.ctex", "res://.godot/imported/vayanne_7.png-1adb7d22240fc456c9ce80b46b04feea.etc2.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=1024
+detect_3d/compress_to=1

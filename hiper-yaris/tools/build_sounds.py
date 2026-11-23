@@ -29,3 +29,22 @@ x = t(0.06); save("click", 0.5 * np.sin(2*np.pi*900*x) * env(len(x), r=0.015))
 # Geri sayım bip'leri
 x = t(0.18); save("beep", 0.4 * np.sin(2*np.pi*660*x) * env(len(x), r=0.08))
 x = t(0.5); save("go", 0.4 * (np.sin(2*np.pi*990*x) + 0.5*np.sin(2*np.pi*1980*x)) * env(len(x), r=0.2))
+
+# Rakip motoru: V8 benzeri, ateşleme darbeli, kesintisiz döngü (1 sn, tüm frekanslar tam sayı Hz)
+x = t(1.0); f0 = 80
+ph = 2*np.pi*f0*x
+s = np.zeros_like(x)
+for k, a in [(1, 1.0), (2, 0.7), (3, 0.45), (4, 0.5), (6, 0.25), (8, 0.18), (12, 0.08)]:
+    s += a * np.sin(k*ph + rng.uniform(0, 6.28))
+pulse = 0.55 + 0.45 * (0.5 + 0.5*np.sin(4*ph)) ** 3          # ateşleme vuruşları
+noise = np.fft.irfft(np.fft.rfft(rng.normal(0, 1, len(x))) * (np.arange(len(x)//2+1) < 2500))
+s = s * pulse + 0.35 * noise * pulse
+s = np.tanh(s * 0.9)
+save("engine_rival", 0.55 * s / np.max(np.abs(s)))
+# Geçiş uğultusu: yükselip düşen filtreli gürültü (yanından araç geçince)
+x = t(0.9); n = rng.normal(0, 1, len(x))
+spec = np.fft.rfft(n); fr = np.fft.rfftfreq(len(x), 1/SR)
+spec *= np.exp(-((fr - 700) / 900) ** 2)
+w = np.fft.irfft(spec, len(x)); w /= np.max(np.abs(w))
+e = np.exp(-((x - 0.3) / 0.16) ** 2)
+save("whoosh", 0.6 * w * e)

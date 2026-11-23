@@ -55,3 +55,12 @@ get(files(HDRI)["hdri"]["1k"]["hdr"]["url"], os.path.join(ROOT, "sky", HDRI + ".
 # Kaya/bitki kaynakları assets_src/ altına iner; sonra: python3 tools/optimize_env.py
 get("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/CarConcept/glTF-Binary/CarConcept.glb",
     os.path.join(ROOT, "cars", "CarConcept.glb"))
+
+# Gerçekçi araçlar (vecarz / heynic, CC BY 4.0) Sketchfab indirme API'siyle alındı
+# (SKETCHFAB_TOKEN gerekir; glb biçimi) -> assets/real/cars/<ad>.glb
+VECARZ = {
+    "owl": "8c29654fd6ff413cb9953f61171e1d5f", "xj220": "48f00f3f68834595bec22429b46a502c",
+    "a110": "7dc988bfd038404c849566364a79b03c", "evo6": "c3d5dcd8ff724bc88c46760d92fc5188",
+    "vayanne": "37e0cb314d194d5bbac8e5232029a3ea", "zerouno": "0106bcb6d4554d4b9228d2a3aa1ec0ec",
+    "m8gte": "4e503bae03c642c08c413d7796bed081", "lmp919": "1f4e28d5d7b64068afdc50ab92e86c6b",
+}

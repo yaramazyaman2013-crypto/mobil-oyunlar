@@ -28,6 +28,7 @@ var rest := 0.25         # bağlantı noktasının tekerlek merkezinin üstünde
 var droop := 0.18
 var max_steer := 0.55
 var steer_assist := true
+var yaw_gain := 2.5        # dönüş tepkisi (süspansiyon modifiyesiyle artar)
 
 # --- Durum
 var wheels: Array = []   # {mount, radius, front, left, pivot, base_pos, to_parent, spin, base_basis, axle, up, contact, comp}
@@ -80,7 +81,9 @@ func _physics_process(delta: float) -> void:
 
 	# Hıza duyarlı direksiyon (yüksek hızda daha az açı)
 	var target_angle := steer * lerpf(max_steer, 0.11, clampf(spd / 70.0, 0.0, 1.0))
-	steer_angle = move_toward(steer_angle, target_angle, delta * 2.2)
+	# Merkeze dönüş daha hızlı: direksiyon bırakınca araç hemen toparlar
+	var returning := absf(target_angle) < absf(steer_angle) or signf(target_angle) != signf(steer_angle)
+	steer_angle = move_toward(steer_angle, target_angle, delta * (3.6 if returning else 2.6))
 
 	# Motor kuvveti (güç sınırlı)
 	var kw := power_kw + (nitro_kw if nitro_on else 0.0)
@@ -135,6 +138,9 @@ func _physics_process(delta: float) -> void:
 			if handbrake and not w.front:
 				f_long -= signf(v_long) * minf(900.0, absf(v_long) * mass * 0.25)
 			f_long -= v_long * 3.0   # yuvarlanma direnci
+			# Motor freni: gaz bırakılınca araç ağırlığını hissettirir
+			if throttle < 0.05 and brake < 0.05 and not w.front:
+				f_long -= signf(v_long) * minf(260.0, absf(v_long) * 40.0)
 			# Yanal: kayma ile orantılı, sürtünme dairesiyle sınırlı
 			var f_lat := -v_lat * stiff
 			var total := Vector2(f_long, f_lat)
@@ -166,7 +172,7 @@ func _physics_process(delta: float) -> void:
 		var want := -steer_angle * spd / 2.7          # bisiklet modeli hedef dönüş hızı
 		var lim := 16.0 / maxf(spd, 4.0)              # lastiklerin taşıyabileceği en fazla dönüş
 		want = clampf(want, -lim, lim)
-		apply_torque(up * (want - yaw_rate) * mass * 2.5)
+		apply_torque(up * (want - yaw_rate) * mass * yaw_gain)
 	# Drift yardımı (arcade): el freninde kayma açısı ~28°'de tutulur, hız aracın baktığı yöne aktarılır
 	if wrecked:
 		pass
